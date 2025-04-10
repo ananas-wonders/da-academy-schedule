@@ -5,7 +5,7 @@ import { days, tracks, sessions } from '@/data/scheduleData';
 
 const Index = () => {
   return (
-    <div className="min-h-screen p-4 md:p-6">
+    <div className="min-h-screen p-4 md:p-6 max-w-[1600px] mx-auto">
       <header className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-center mb-2">Track Day Schedule</h1>
         <p className="text-gray-600 text-center">View all scheduled sessions across different tracks</p>
@@ -22,7 +22,7 @@ const Index = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-white rounded-lg shadow overflow-hidden">
         <ScheduleGrid 
           days={days} 
           tracks={tracks} 

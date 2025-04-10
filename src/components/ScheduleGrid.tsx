@@ -34,48 +34,44 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({ days, tracks, sessions }) =
 
   return (
     <div className="overflow-x-auto">
-      <div 
-        className="schedule-grid"
-        style={{ gridTemplateColumns: `150px repeat(${tracks.length}, minmax(200px, 1fr))` }}
-      >
-        {/* Header row with track names */}
-        <div className="day-row" style={{ gridTemplateColumns: `150px repeat(${tracks.length}, minmax(200px, 1fr))` }}>
-          <div className="day-header"></div> {/* Empty corner cell */}
-          {tracks.map(track => (
-            <div key={track.id} className="track-header">
-              {track.name}
-            </div>
+      <table className="min-w-full border-collapse">
+        <thead>
+          <tr>
+            <th className="w-[150px] bg-gray-50 p-3 font-semibold text-left border-b border-r border-gray-200"></th>
+            {tracks.map(track => (
+              <th key={track.id} className="min-w-[250px] bg-gray-50 p-3 font-semibold text-center border-b border-r border-gray-200">
+                {track.name}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {days.map(day => (
+            <tr key={day.id}>
+              <td className="w-[150px] bg-gray-50 p-3 font-medium text-left border-b border-r border-gray-200 sticky left-0">
+                {day.name}
+              </td>
+              {tracks.map(track => {
+                const cellSessions = getSessionsForCell(day.id, track.id);
+                return (
+                  <td key={`${day.id}-${track.id}`} className="min-w-[250px] p-2 border-b border-r border-gray-200 align-top">
+                    {cellSessions.map(session => (
+                      <SessionCard
+                        key={session.id}
+                        title={session.title}
+                        instructor={session.instructor}
+                        type={session.type}
+                        count={session.count}
+                        total={session.total}
+                      />
+                    ))}
+                  </td>
+                );
+              })}
+            </tr>
           ))}
-        </div>
-
-        {/* Day rows */}
-        {days.map(day => (
-          <div 
-            key={day.id} 
-            className="day-row"
-            style={{ gridTemplateColumns: `150px repeat(${tracks.length}, minmax(200px, 1fr))` }}
-          >
-            <div className="day-header">{day.name}</div>
-            {tracks.map(track => {
-              const cellSessions = getSessionsForCell(day.id, track.id);
-              return (
-                <div key={`${day.id}-${track.id}`} className="session-cell">
-                  {cellSessions.map(session => (
-                    <SessionCard
-                      key={session.id}
-                      title={session.title}
-                      instructor={session.instructor}
-                      type={session.type}
-                      count={session.count}
-                      total={session.total}
-                    />
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
+        </tbody>
+      </table>
     </div>
   );
 };
