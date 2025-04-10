@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -49,6 +50,12 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Custom colors for session cards */
+    --online: 210 100% 50%;
+    --online-light: 210 100% 95%;
+    --offline: 142 76% 36%;
+    --offline-light: 142 76% 95%;
   }
 
   .dark {
@@ -87,6 +94,12 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Custom colors for session cards in dark mode */
+    --online: 210 100% 50%;
+    --online-light: 210 100% 20%;
+    --offline: 142 76% 36%;
+    --offline-light: 142 76% 20%;
   }
 }
 
@@ -97,5 +110,67 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .schedule-grid {
+    @apply grid overflow-x-auto;
+  }
+
+  .day-row {
+    @apply grid grid-cols-1 border-b border-gray-200;
+  }
+
+  .day-header {
+    @apply py-2 px-4 font-medium bg-gray-50 sticky left-0 z-10;
+  }
+
+  .track-header {
+    @apply py-2 px-4 font-medium text-center border-b border-gray-200 bg-gray-50;
+  }
+
+  .session-cell {
+    @apply p-2 border-r border-gray-200 min-h-[120px] overflow-y-auto;
+  }
+
+  .session-card {
+    @apply mb-2 p-2 rounded-md shadow-sm transition-all duration-200 hover:shadow-md;
+  }
+
+  .session-card.online {
+    @apply bg-[hsl(var(--online-light))] border-l-4 border-[hsl(var(--online))];
+  }
+
+  .session-card.offline {
+    @apply bg-[hsl(var(--offline-light))] border-l-4 border-[hsl(var(--offline))];
+  }
+
+  .session-title {
+    @apply font-medium mb-1;
+  }
+
+  .session-instructor {
+    @apply text-sm text-gray-700 mb-1;
+  }
+
+  .session-info {
+    @apply text-xs flex justify-between items-center;
+  }
+
+  .session-mode {
+    @apply px-2 py-0.5 rounded-full text-white text-xs;
+  }
+
+  .session-mode.online {
+    @apply bg-[hsl(var(--online))];
+  }
+
+  .session-mode.offline {
+    @apply bg-[hsl(var(--offline))];
+  }
+
+  .session-count {
+    @apply text-xs text-gray-500;
   }
 }
