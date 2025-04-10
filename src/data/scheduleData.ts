@@ -1,15 +1,36 @@
-
 import { Day, Track, Session } from '@/components/ScheduleGrid';
+import { addDays, format } from 'date-fns';
 
-export const days: Day[] = [
-  { id: 'mon', name: 'Monday' },
-  { id: 'tue', name: 'Tuesday' },
-  { id: 'wed', name: 'Wednesday' },
-  { id: 'thu', name: 'Thursday' },
-  { id: 'fri', name: 'Friday' },
-  { id: 'sat', name: 'Saturday' },
-  { id: 'sun', name: 'Sunday' },
-];
+// Helper function to generate dates starting with the upcoming Saturday
+const getNextSaturday = (): Date => {
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  const daysUntilNextSaturday = dayOfWeek === 6 ? 0 : 6 - dayOfWeek;
+  return addDays(today, daysUntilNextSaturday);
+};
+
+// Generate days with proper dates, starting from upcoming Saturday
+const generateDaysWithDates = (numDays: number = 14): Day[] => {
+  const startDate = getNextSaturday();
+  const days: Day[] = [];
+  
+  for (let i = 0; i < numDays; i++) {
+    const currentDate = addDays(startDate, i);
+    const dayName = format(currentDate, 'EEEE');
+    const dateStr = format(currentDate, 'MMM d, yyyy');
+    days.push({
+      id: format(currentDate, 'yyyy-MM-dd'),
+      name: dayName,
+      date: dateStr,
+      isFriday: dayName === 'Friday'
+    });
+  }
+  
+  return days;
+};
+
+// Generate 28 days (4 weeks) of data to support all view modes
+export const allDays = generateDaysWithDates(28);
 
 export const tracks: Track[] = [
   { id: 'track1', name: 'Track 1' },
