@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { SessionCardProps } from './SessionCard';
+import { SessionCardProps, SessionType } from './SessionCard';
 import { Day, Track } from './ScheduleGrid';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -16,7 +16,7 @@ interface AddSessionFormProps {
 const AddSessionForm: React.FC<AddSessionFormProps> = ({ day, track, onAddSession }) => {
   const [title, setTitle] = useState('');
   const [instructor, setInstructor] = useState('');
-  const [type, setType] = useState<'online' | 'offline'>('online');
+  const [type, setType] = useState<SessionType>('online');
   const [count, setCount] = useState(0);
   const [total, setTotal] = useState(10);
 
@@ -77,7 +77,7 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ day, track, onAddSessio
         <Label>Session Type</Label>
         <RadioGroup 
           value={type} 
-          onValueChange={(value) => setType(value as 'online' | 'offline')}
+          onValueChange={(value) => setType(value as SessionType)}
           className="flex gap-4"
         >
           <div className="flex items-center space-x-2">

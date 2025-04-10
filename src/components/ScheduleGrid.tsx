@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import SessionCard, { SessionCardProps } from './SessionCard';
+import SessionCard, { SessionCardProps, SessionType } from './SessionCard';
 import { cn } from '@/lib/utils';
 import { Edit, GripHorizontal, Plus, Folder, FolderPlus } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
