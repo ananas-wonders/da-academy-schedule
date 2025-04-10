@@ -5,13 +5,16 @@ import { arrayMove, SortableContext, horizontalListSortingStrategy, useSortable 
 import { CSS } from '@dnd-kit/utilities';
 import SessionCard, { SessionCardProps, SessionType } from './SessionCard';
 import { cn } from '@/lib/utils';
-import { Edit, GripHorizontal, Plus, Folder, FolderPlus } from 'lucide-react';
+import { Edit, GripHorizontal, Plus, FolderPlus, Settings, Eye, EyeOff, Palette } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import AddSessionForm from './AddSessionForm';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 export interface Track {
   id: string;
@@ -22,6 +25,8 @@ export interface Track {
 export interface TrackGroup {
   id: string;
   name: string;
+  color?: string;
+  visible?: boolean;
 }
 
 export interface Day {
@@ -51,11 +56,13 @@ const SortableTrack = ({
   track, 
   onEditName, 
   groupName,
+  groupColor = '#e2e8f0',
   grouped = false
 }: { 
   track: Track; 
   onEditName: (id: string, name: string) => void;
   groupName?: string;
+  groupColor?: string;
   grouped?: boolean;
 }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -72,6 +79,7 @@ const SortableTrack = ({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    ...(grouped ? { borderTop: `3px solid ${groupColor}` } : {})
   };
 
   const handleSaveName = () => {
@@ -86,7 +94,7 @@ const SortableTrack = ({
       className="min-w-[250px] bg-gray-50 p-3 font-semibold text-center border-b border-r border-gray-200 relative"
     >
       {grouped && (
-        <div className="text-xs text-gray-500 mb-1">{groupName}</div>
+        <div className="text-xs text-gray-500 mb-1" style={{ color: groupColor }}>{groupName}</div>
       )}
       
       {isEditing ? (
@@ -123,6 +131,179 @@ const SortableTrack = ({
   );
 };
 
+const EditSessionDialog = ({ 
+  session, 
+  onSave, 
+  open, 
+  onOpenChange 
+}: { 
+  session: Session | null, 
+  onSave: (updatedSession: Session) => void,
+  open: boolean,
+  onOpenChange: (open: boolean) => void
+}) => {
+  const [editedSession, setEditedSession] = useState<Session | null>(null);
+
+  React.useEffect(() => {
+    if (session) {
+      setEditedSession({ ...session });
+    }
+  }, [session]);
+
+  if (!editedSession) return null;
+
+  const handleChange = (field: keyof Session, value: any) => {
+    setEditedSession(prev => ({ ...prev!, [field]: value }));
+  };
+
+  const handleSave = () => {
+    onSave(editedSession);
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Session</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="edit-title">Session Title</Label>
+            <Input
+              id="edit-title"
+              value={editedSession.title}
+              onChange={(e) => handleChange('title', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-instructor">Instructor</Label>
+            <Input
+              id="edit-instructor"
+              value={editedSession.instructor}
+              onChange={(e) => handleChange('instructor', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Session Type</Label>
+            <div className="flex space-x-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="edit-type-online"
+                  checked={editedSession.type === 'online'}
+                  onChange={() => handleChange('type', 'online')}
+                />
+                <Label htmlFor="edit-type-online">Online</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="edit-type-offline"
+                  checked={editedSession.type === 'offline'}
+                  onChange={() => handleChange('type', 'offline')}
+                />
+                <Label htmlFor="edit-type-offline">Offline</Label>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-count">Current Count</Label>
+              <Input
+                id="edit-count"
+                type="number"
+                min={0}
+                value={editedSession.count}
+                onChange={(e) => handleChange('count', Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-total">Total Capacity</Label>
+              <Input
+                id="edit-total"
+                type="number"
+                min={1}
+                value={editedSession.total}
+                onChange={(e) => handleChange('total', Number(e.target.value))}
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleSave}>Save Changes</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const GroupSettings = ({ 
+  groups,
+  onUpdateGroups,
+  onToggleGroupVisibility
+}: { 
+  groups: TrackGroup[],
+  onUpdateGroups: (updatedGroups: TrackGroup[]) => void,
+  onToggleGroupVisibility: (groupId: string, visible: boolean) => void
+}) => {
+  const [editingGroups, setEditingGroups] = useState<TrackGroup[]>([...groups]);
+  
+  const handleUpdateGroup = (index: number, field: keyof TrackGroup, value: any) => {
+    const newGroups = [...editingGroups];
+    newGroups[index] = { ...newGroups[index], [field]: value };
+    setEditingGroups(newGroups);
+  };
+  
+  const handleSave = () => {
+    onUpdateGroups(editingGroups);
+  };
+  
+  return (
+    <div className="p-4 space-y-4">
+      <h3 className="font-medium">Manage Track Groups</h3>
+      
+      <div className="space-y-4">
+        {editingGroups.map((group, index) => (
+          <div key={group.id} className="flex flex-col space-y-2 p-3 border rounded-md">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id={`visible-${group.id}`}
+                  checked={group.visible !== false}
+                  onChange={(e) => onToggleGroupVisibility(group.id, e.target.checked)}
+                />
+                <Label htmlFor={`visible-${group.id}`} className="cursor-pointer">
+                  {group.visible !== false ? 
+                    <Eye className="h-4 w-4" /> : 
+                    <EyeOff className="h-4 w-4" />
+                  }
+                </Label>
+              </div>
+              <input
+                type="color"
+                value={group.color || '#e2e8f0'}
+                onChange={(e) => handleUpdateGroup(index, 'color', e.target.value)}
+                className="w-8 h-8 p-0 rounded cursor-pointer"
+                title="Select group color"
+              />
+            </div>
+            <Input
+              value={group.name}
+              onChange={(e) => handleUpdateGroup(index, 'name', e.target.value)}
+              placeholder="Group name"
+            />
+          </div>
+        ))}
+      </div>
+      
+      <Button onClick={handleSave} className="w-full">Save Changes</Button>
+    </div>
+  );
+};
+
 const ScheduleGrid: React.FC<ScheduleGridProps> = ({ 
   days, 
   tracks: initialTracks, 
@@ -132,15 +313,23 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
   const [tracks, setTracks] = useState<Track[]>(initialTracks);
   const [sessions, setSessions] = useState<Session[]>(initialSessions);
   const [groups, setGroups] = useState<TrackGroup[]>([]);
-  const [showGroupModal, setShowGroupModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [selectedTracks, setSelectedTracks] = useState<string[]>([]);
+  const [editingSession, setEditingSession] = useState<Session | null>(null);
+  const [sessionDialogOpen, setSessionDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor)
   );
+
+  // Filter visible tracks based on their group visibility
+  const visibleTracks = tracks.filter(track => {
+    if (!track.groupId) return true;
+    const group = groups.find(g => g.id === track.groupId);
+    return group ? group.visible !== false : true;
+  });
 
   // Function to get sessions for a specific day and track
   const getSessionsForCell = (dayId: string, trackId: string) => {
@@ -192,7 +381,12 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     if (!newGroupName.trim()) return;
     
     const newGroupId = `group-${Date.now()}`;
-    setGroups([...groups, { id: newGroupId, name: newGroupName }]);
+    setGroups([...groups, { 
+      id: newGroupId, 
+      name: newGroupName,
+      color: getRandomColor(),
+      visible: true
+    }]);
     
     // Update selected tracks to be part of this group
     setTracks(tracks.map(track => 
@@ -201,11 +395,30 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     
     setNewGroupName('');
     setSelectedTracks([]);
-    setShowGroupModal(false);
     
     toast({
       title: "Track group created",
       description: `"${newGroupName}" group has been created with the selected tracks`,
+    });
+  };
+
+  const handleUpdateGroups = (updatedGroups: TrackGroup[]) => {
+    setGroups(updatedGroups);
+    
+    toast({
+      title: "Groups updated",
+      description: "Track groups have been successfully updated",
+    });
+  };
+
+  const handleToggleGroupVisibility = (groupId: string, visible: boolean) => {
+    setGroups(groups.map(group => 
+      group.id === groupId ? { ...group, visible } : group
+    ));
+    
+    toast({
+      title: visible ? "Group shown" : "Group hidden",
+      description: `Group is now ${visible ? 'visible' : 'hidden'} in the schedule`,
     });
   };
 
@@ -226,29 +439,42 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     });
   };
 
-  // Group tracks by their groupId
-  const groupedTracks = tracks.reduce((acc, track) => {
-    if (track.groupId) {
-      const group = groups.find(g => g.id === track.groupId);
-      if (group) {
-        const groupName = group.name;
-        if (!acc[groupName]) {
-          acc[groupName] = [];
-        }
-        acc[groupName].push(track);
-      } else {
-        if (!acc['Ungrouped']) acc['Ungrouped'] = [];
-        acc['Ungrouped'].push(track);
-      }
-    } else {
-      if (!acc['Ungrouped']) acc['Ungrouped'] = [];
-      acc['Ungrouped'].push(track);
+  const handleEditSession = (sessionId: string) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (session) {
+      setEditingSession(session);
+      setSessionDialogOpen(true);
     }
-    return acc;
-  }, {} as Record<string, Track[]>);
+  };
+
+  const handleSaveEditedSession = (updatedSession: Session) => {
+    setSessions(sessions.map(session => 
+      session.id === updatedSession.id ? updatedSession : session
+    ));
+    
+    toast({
+      title: "Session updated",
+      description: `The session "${updatedSession.title}" has been updated`,
+    });
+  };
+
+  const getRandomColor = () => {
+    const colors = [
+      '#f87171', '#fb923c', '#fbbf24', '#a3e635', 
+      '#4ade80', '#2dd4bf', '#38bdf8', '#818cf8', 
+      '#c084fc', '#e879f9', '#fb7185'
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
+
+  // Get group for a track
+  const getTrackGroup = (track: Track) => {
+    if (!track.groupId) return null;
+    return groups.find(g => g.id === track.groupId) || null;
+  };
 
   // Flatten the grouped tracks for rendering
-  const trackIds = tracks.map(track => track.id);
+  const trackIds = visibleTracks.map(track => track.id);
 
   return (
     <div className="overflow-x-auto">
@@ -257,19 +483,43 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
+        <div className="flex justify-end mb-2">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Settings className="mr-2 h-4 w-4" /> Group Settings
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Track Group Settings</SheetTitle>
+                <SheetDescription>
+                  Manage your track groups, colors, and visibility
+                </SheetDescription>
+              </SheetHeader>
+              <GroupSettings 
+                groups={groups} 
+                onUpdateGroups={handleUpdateGroups}
+                onToggleGroupVisibility={handleToggleGroupVisibility}
+              />
+            </SheetContent>
+          </Sheet>
+        </div>
+
         <table className="min-w-full border-collapse">
           <thead>
             <tr>
               <th className="w-[180px] bg-gray-50 p-3 font-semibold text-left border-b border-r border-gray-200"></th>
               <SortableContext items={trackIds} strategy={horizontalListSortingStrategy}>
-                {tracks.map(track => {
-                  const group = track.groupId ? groups.find(g => g.id === track.groupId) : undefined;
+                {visibleTracks.map(track => {
+                  const group = getTrackGroup(track);
                   return (
                     <SortableTrack 
                       key={track.id} 
                       track={track} 
                       onEditName={handleEditTrackName}
                       groupName={group?.name}
+                      groupColor={group?.color}
                       grouped={!!track.groupId}
                     />
                   );
@@ -314,24 +564,38 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
                         </div>
                         
                         <div className="mb-4">
-                          <p className="text-sm font-medium mb-2">Select Tracks</p>
-                          <div className="space-y-2">
+                          <div className="flex justify-between items-center mb-2">
+                            <p className="text-sm font-medium">Select Tracks</p>
+                            <div className="flex items-center text-xs">
+                              <Checkbox 
+                                id="select-all"
+                                checked={selectedTracks.length === tracks.length}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedTracks(tracks.map(t => t.id));
+                                  } else {
+                                    setSelectedTracks([]);
+                                  }
+                                }}
+                              />
+                              <label htmlFor="select-all" className="ml-2">Select All</label>
+                            </div>
+                          </div>
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
                             {tracks.map(track => (
                               <div key={track.id} className="flex items-center">
-                                <input 
-                                  type="checkbox"
+                                <Checkbox 
                                   id={`track-${track.id}`}
                                   checked={selectedTracks.includes(track.id)}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
                                       setSelectedTracks([...selectedTracks, track.id]);
                                     } else {
                                       setSelectedTracks(selectedTracks.filter(id => id !== track.id));
                                     }
                                   }}
-                                  className="mr-2"
                                 />
-                                <label htmlFor={`track-${track.id}`}>{track.name}</label>
+                                <label htmlFor={`track-${track.id}`} className="ml-2">{track.name}</label>
                               </div>
                             ))}
                           </div>
@@ -355,7 +619,7 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
                   <div className="font-semibold">{day.name}</div>
                   <div className="text-xs text-gray-500">{day.date}</div>
                 </td>
-                {tracks.map(track => {
+                {visibleTracks.map(track => {
                   const cellSessions = getSessionsForCell(day.id, track.id);
                   return (
                     <td 
@@ -366,14 +630,19 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
                       )}
                     >
                       {cellSessions.map(session => (
-                        <SessionCard
-                          key={session.id}
-                          title={session.title}
-                          instructor={session.instructor}
-                          type={session.type}
-                          count={session.count}
-                          total={session.total}
-                        />
+                        <div key={session.id} className="relative group">
+                          <div 
+                            className="absolute inset-0 bg-transparent group-hover:bg-black/5 rounded-md z-0 cursor-pointer"
+                            onClick={() => handleEditSession(session.id)}
+                          />
+                          <SessionCard
+                            title={session.title}
+                            instructor={session.instructor}
+                            type={session.type}
+                            count={session.count}
+                            total={session.total}
+                          />
+                        </div>
                       ))}
                       
                       <Popover>
@@ -401,6 +670,13 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
           </tbody>
         </table>
       </DndContext>
+      
+      <EditSessionDialog
+        session={editingSession}
+        onSave={handleSaveEditedSession}
+        open={sessionDialogOpen}
+        onOpenChange={setSessionDialogOpen}
+      />
     </div>
   );
 };

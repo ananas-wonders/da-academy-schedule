@@ -1,3 +1,6 @@
+
+import { SessionType } from '@/components/SessionCard';
+
 export const allDays = [
   {
     id: "day-1",
@@ -154,7 +157,7 @@ export const sessions = [
     trackId: "track-1",
     title: "Intro to Racing",
     instructor: "John Smith",
-    type: "online",
+    type: "online" as SessionType,
     count: 12,
     total: 20
   },
@@ -164,7 +167,7 @@ export const sessions = [
     trackId: "track-1",
     title: "Basic Techniques",
     instructor: "Maria Johnson",
-    type: "offline",
+    type: "offline" as SessionType,
     count: 8,
     total: 15
   },

@@ -33,22 +33,8 @@ const Index = () => {
 
   return (
     <div className="min-h-screen p-4 md:p-6 max-w-[1600px] mx-auto">
-      <header className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-center mb-2">Track Day Schedule</h1>
-        <p className="text-gray-600 text-center">View and manage all scheduled sessions across different tracks</p>
-      </header>
-
-      <div className="flex justify-between items-center mb-6">
-        <div className="legend flex gap-4">
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-[hsl(var(--online))] mr-2"></div>
-            <span className="text-sm">Online Session</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-[hsl(var(--offline))] mr-2"></div>
-            <span className="text-sm">Offline Session</span>
-          </div>
-        </div>
+      <header className="mb-6 flex justify-between items-center">
+        <h1 className="text-2xl md:text-3xl font-bold">Digital Arts and Design Academy Schedule</h1>
         
         <div className="flex items-center gap-2">
           <label htmlFor="view-density" className="text-sm font-medium">View:</label>
@@ -64,7 +50,7 @@ const Index = () => {
             </SelectContent>
           </Select>
         </div>
-      </div>
+      </header>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <ScheduleGrid 
