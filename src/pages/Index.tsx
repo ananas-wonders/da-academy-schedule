@@ -1,11 +1,18 @@
 
 import React, { useState } from 'react';
-import ScheduleGrid, { ViewDensity } from '@/components/ScheduleGrid';
-import { allDays, tracks, sessions } from '@/data/scheduleData';
+import ScheduleGrid, { ViewDensity, Track, TrackGroup } from '@/components/ScheduleGrid';
+import { allDays, sessions } from '@/data/scheduleData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Toaster } from "@/components/ui/toaster";
 
 const Index = () => {
   const [viewDensity, setViewDensity] = useState<ViewDensity>('2weeks');
+  const [tracks, setTracks] = useState<Track[]>([
+    { id: 'track-1', name: 'Beginner Course' },
+    { id: 'track-2', name: 'Intermediate' },
+    { id: 'track-3', name: 'Advanced Course' },
+    { id: 'track-4', name: 'Expert Racing' }
+  ]);
   
   // Filter days based on selected view density
   const getVisibleDays = () => {
@@ -27,7 +34,7 @@ const Index = () => {
     <div className="min-h-screen p-4 md:p-6 max-w-[1600px] mx-auto">
       <header className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-center mb-2">Track Day Schedule</h1>
-        <p className="text-gray-600 text-center">View all scheduled sessions across different tracks</p>
+        <p className="text-gray-600 text-center">View and manage all scheduled sessions across different tracks</p>
       </header>
 
       <div className="flex justify-between items-center mb-6">
@@ -66,6 +73,8 @@ const Index = () => {
           viewDensity={viewDensity}
         />
       </div>
+      
+      <Toaster />
     </div>
   );
 };

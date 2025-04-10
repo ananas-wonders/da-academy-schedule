@@ -1,250 +1,309 @@
-import { Day, Track, Session } from '@/components/ScheduleGrid';
-import { addDays, format } from 'date-fns';
-
-// Helper function to generate dates starting with the upcoming Saturday
-const getNextSaturday = (): Date => {
-  const today = new Date();
-  const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-  const daysUntilNextSaturday = dayOfWeek === 6 ? 0 : 6 - dayOfWeek;
-  return addDays(today, daysUntilNextSaturday);
-};
-
-// Generate days with proper dates, starting from upcoming Saturday
-const generateDaysWithDates = (numDays: number = 14): Day[] => {
-  const startDate = getNextSaturday();
-  const days: Day[] = [];
-  
-  for (let i = 0; i < numDays; i++) {
-    const currentDate = addDays(startDate, i);
-    const dayName = format(currentDate, 'EEEE');
-    const dateStr = format(currentDate, 'MMM d, yyyy');
-    days.push({
-      id: format(currentDate, 'yyyy-MM-dd'),
-      name: dayName,
-      date: dateStr,
-      isFriday: dayName === 'Friday'
-    });
+export const allDays = [
+  {
+    id: "day-1",
+    name: "Sunday",
+    date: "2024-07-07",
+  },
+  {
+    id: "day-2",
+    name: "Monday",
+    date: "2024-07-08",
+  },
+  {
+    id: "day-3",
+    name: "Tuesday",
+    date: "2024-07-09",
+  },
+  {
+    id: "day-4",
+    name: "Wednesday",
+    date: "2024-07-10",
+  },
+  {
+    id: "day-5",
+    name: "Thursday",
+    date: "2024-07-11",
+  },
+  {
+    id: "day-6",
+    name: "Friday",
+    date: "2024-07-12",
+    isFriday: true
+  },
+  {
+    id: "day-7",
+    name: "Saturday",
+    date: "2024-07-13",
+  },
+  {
+    id: "day-8",
+    name: "Sunday",
+    date: "2024-07-14",
+  },
+  {
+    id: "day-9",
+    name: "Monday",
+    date: "2024-07-15",
+  },
+  {
+    id: "day-10",
+    name: "Tuesday",
+    date: "2024-07-16",
+  },
+  {
+    id: "day-11",
+    name: "Wednesday",
+    date: "2024-07-17",
+  },
+  {
+    id: "day-12",
+    name: "Thursday",
+    date: "2024-07-18",
+  },
+  {
+    id: "day-13",
+    name: "Friday",
+    date: "2024-07-19",
+    isFriday: true
+  },
+  {
+    id: "day-14",
+    name: "Saturday",
+    date: "2024-07-20",
+  },
+  {
+    id: "day-15",
+    name: "Sunday",
+    date: "2024-07-21",
+  },
+  {
+    id: "day-16",
+    name: "Monday",
+    date: "2024-07-22",
+  },
+  {
+    id: "day-17",
+    name: "Tuesday",
+    date: "2024-07-23",
+  },
+    {
+    id: "day-18",
+    name: "Wednesday",
+    date: "2024-07-24",
+  },
+  {
+    id: "day-19",
+    name: "Thursday",
+    date: "2024-07-25",
+  },
+  {
+    id: "day-20",
+    name: "Friday",
+    date: "2024-07-26",
+    isFriday: true
+  },
+  {
+    id: "day-21",
+    name: "Saturday",
+    date: "2024-07-27",
+  },
+  {
+    id: "day-22",
+    name: "Sunday",
+    date: "2024-07-28",
+  },
+  {
+    id: "day-23",
+    name: "Monday",
+    date: "2024-07-29",
+  },
+  {
+    id: "day-24",
+    name: "Tuesday",
+    date: "2024-07-30",
+  },
+  {
+    id: "day-25",
+    name: "Wednesday",
+    date: "2024-07-31",
+  },
+  {
+    id: "day-26",
+    name: "Thursday",
+    date: "2024-08-01",
+  },
+  {
+    id: "day-27",
+    name: "Friday",
+    date: "2024-08-02",
+    isFriday: true
+  },
+  {
+    id: "day-28",
+    name: "Saturday",
+    date: "2024-08-03",
   }
-  
-  return days;
-};
-
-// Generate 28 days (4 weeks) of data to support all view modes
-export const allDays = generateDaysWithDates(28);
-
-export const tracks: Track[] = [
-  { id: 'track1', name: 'Track 1' },
-  { id: 'track2', name: 'Track 2' },
-  { id: 'track3', name: 'Track 3' },
-  { id: 'track4', name: 'Track 4' },
 ];
 
-export const sessions: Session[] = [
-  // Monday
+// Add more dummy sessions
+export const sessions = [
+  // Beginner Course sessions
   {
-    id: '1',
-    dayId: 'mon',
-    trackId: 'track1',
-    title: 'Advanced Racing Techniques',
-    instructor: 'John Smith',
-    type: 'offline',
-    count: 2,
-    total: 5
+    id: "session-1",
+    dayId: "day-1",
+    trackId: "track-1",
+    title: "Intro to Racing",
+    instructor: "John Smith",
+    type: "online",
+    count: 12,
+    total: 20
   },
   {
-    id: '2',
-    dayId: 'mon',
-    trackId: 'track2',
-    title: 'Beginner Track Day',
-    instructor: 'Jane Doe',
-    type: 'offline',
-    count: 1,
-    total: 3
+    id: "session-2",
+    dayId: "day-2",
+    trackId: "track-1",
+    title: "Basic Techniques",
+    instructor: "Maria Johnson",
+    type: "offline",
+    count: 8,
+    total: 15
   },
   {
-    id: '3',
-    dayId: 'mon',
-    trackId: 'track3',
-    title: 'Virtual Racing Simulator',
-    instructor: 'Mark Johnson',
-    type: 'online',
-    count: 3,
+    id: "session-3",
+    dayId: "day-3",
+    trackId: "track-1",
+    title: "Safety Rules",
+    instructor: "Robert Chen",
+    type: "online",
+    count: 25,
+    total: 30
+  },
+  
+  // Intermediate sessions
+  {
+    id: "session-4",
+    dayId: "day-1",
+    trackId: "track-2",
+    title: "Cornering Mastery",
+    instructor: "Lisa Williams",
+    type: "offline",
+    count: 10,
+    total: 12
+  },
+  {
+    id: "session-5",
+    dayId: "day-3",
+    trackId: "track-2",
+    title: "Braking Techniques",
+    instructor: "Michael Brown",
+    type: "offline",
+    count: 7,
+    total: 10
+  },
+  {
+    id: "session-6",
+    dayId: "day-4",
+    trackId: "track-2",
+    title: "Racing Lines",
+    instructor: "Sarah Davis",
+    type: "online",
+    count: 15,
+    total: 20
+  },
+  
+  // Advanced Course sessions
+  {
+    id: "session-7",
+    dayId: "day-2",
+    trackId: "track-3",
+    title: "Advanced Tactics",
+    instructor: "James Wilson",
+    type: "offline",
+    count: 8,
     total: 8
   },
-  // Tuesday
   {
-    id: '4',
-    dayId: 'tue',
-    trackId: 'track1',
-    title: 'Defensive Driving',
-    instructor: 'Sarah Williams',
-    type: 'offline',
-    count: 2,
-    total: 4
+    id: "session-8",
+    dayId: "day-5",
+    trackId: "track-3",
+    title: "Race Simulation",
+    instructor: "Emily Taylor",
+    type: "online",
+    count: 12,
+    total: 15
   },
+  
+  // Expert Racing sessions
   {
-    id: '5',
-    dayId: 'tue',
-    trackId: 'track1',
-    title: 'Racing Theory',
-    instructor: 'Michael Brown',
-    type: 'online',
-    count: 1,
+    id: "session-9",
+    dayId: "day-1",
+    trackId: "track-4",
+    title: "Pro Racing Workshop",
+    instructor: "Daniel Martinez",
+    type: "offline",
+    count: 6,
     total: 6
   },
   {
-    id: '6',
-    dayId: 'tue',
-    trackId: 'track2',
-    title: 'Performance Analysis',
-    instructor: 'Lisa Garcia',
-    type: 'online',
+    id: "session-10",
+    dayId: "day-3",
+    trackId: "track-4",
+    title: "Championship Prep",
+    instructor: "Olivia Anderson",
+    type: "offline",
     count: 4,
-    total: 6
-  },
-  // Wednesday
-  {
-    id: '7',
-    dayId: 'wed',
-    trackId: 'track3',
-    title: 'Wet Weather Driving',
-    instructor: 'Robert Taylor',
-    type: 'offline',
-    count: 3,
-    total: 7
-  },
-  {
-    id: '8',
-    dayId: 'wed',
-    trackId: 'track4',
-    title: 'Car Setup Basics',
-    instructor: 'Amanda Wilson',
-    type: 'offline',
-    count: 2,
     total: 5
   },
-  // Thursday
   {
-    id: '9',
-    dayId: 'thu',
-    trackId: 'track2',
-    title: 'Cornering Masterclass',
-    instructor: 'David Martinez',
-    type: 'offline',
+    id: "session-11",
+    dayId: "day-6",
+    trackId: "track-4",
+    title: "Advanced Analytics",
+    instructor: "Noah Thompson",
+    type: "online",
+    count: 8,
+    total: 10
+  },
+  
+  // Additional sessions
+  {
+    id: "session-12",
+    dayId: "day-7",
+    trackId: "track-1",
+    title: "Weekend Basics",
+    instructor: "Sophia Lee",
+    type: "offline",
+    count: 18,
+    total: 20
+  },
+  {
+    id: "session-13",
+    dayId: "day-7",
+    trackId: "track-3",
+    title: "Weekend Advanced",
+    instructor: "William Garcia",
+    type: "online",
+    count: 9,
+    total: 15
+  },
+  {
+    id: "session-14",
+    dayId: "day-10",
+    trackId: "track-2",
+    title: "Intermediate Challenge",
+    instructor: "Ava Nelson",
+    type: "offline",
+    count: 10,
+    total: 12
+  },
+  {
+    id: "session-15",
+    dayId: "day-12",
+    trackId: "track-4",
+    title: "Expert Speed Session",
+    instructor: "Ethan Wright",
+    type: "offline",
     count: 5,
-    total: 5
-  },
-  {
-    id: '10',
-    dayId: 'thu',
-    trackId: 'track3',
-    title: 'Virtual Pit Strategy',
-    instructor: 'Emily Robinson',
-    type: 'online',
-    count: 2,
-    total: 4
-  },
-  // Friday
-  {
-    id: '11',
-    dayId: 'fri',
-    trackId: 'track1',
-    title: 'Race Day Preparation',
-    instructor: 'Thomas Lee',
-    type: 'offline',
-    count: 4,
-    total: 8
-  },
-  {
-    id: '12',
-    dayId: 'fri',
-    trackId: 'track4',
-    title: 'Advanced Telemetry',
-    instructor: 'Kevin Clark',
-    type: 'online',
-    count: 3,
     total: 6
-  },
-  // Saturday - Multiple sessions in one cell
-  {
-    id: '13',
-    dayId: 'sat',
-    trackId: 'track2',
-    title: 'Sprint Racing',
-    instructor: 'Jennifer Adams',
-    type: 'offline',
-    count: 1,
-    total: 4
-  },
-  {
-    id: '14',
-    dayId: 'sat',
-    trackId: 'track2',
-    title: 'Endurance Basics',
-    instructor: 'Paul White',
-    type: 'offline',
-    count: 2,
-    total: 5
-  },
-  {
-    id: '15',
-    dayId: 'sat',
-    trackId: 'track2',
-    title: 'Team Racing',
-    instructor: 'Susan Brown',
-    type: 'offline',
-    count: 3,
-    total: 6
-  },
-  {
-    id: '16',
-    dayId: 'sat',
-    trackId: 'track2',
-    title: 'Fuel Management',
-    instructor: 'Brian Johnson',
-    type: 'online',
-    count: 1,
-    total: 3
-  },
-  {
-    id: '17',
-    dayId: 'sat',
-    trackId: 'track2',
-    title: 'Race Rules & Etiquette',
-    instructor: 'Michelle Lee',
-    type: 'online',
-    count: 2,
-    total: 4
-  },
-  // Sunday
-  {
-    id: '18',
-    dayId: 'sun',
-    trackId: 'track1',
-    title: 'Recovery Techniques',
-    instructor: 'Matthew Davis',
-    type: 'offline',
-    count: 1,
-    total: 2
-  },
-  {
-    id: '19',
-    dayId: 'sun',
-    trackId: 'track3',
-    title: 'Race Analysis',
-    instructor: 'Jessica Wilson',
-    type: 'online',
-    count: 4,
-    total: 7
-  },
-  {
-    id: '20',
-    dayId: 'sun',
-    trackId: 'track4',
-    title: 'Career Development',
-    instructor: 'Andrew Scott',
-    type: 'online',
-    count: 2,
-    total: 5
-  },
+  }
 ];
