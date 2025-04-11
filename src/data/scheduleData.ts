@@ -1,4 +1,4 @@
-import { SessionType, SessionTime } from '@/components/SessionCard';
+import { SessionType, SessionTime, type SessionCardProps } from '@/components/SessionCard';
 
 export const allDays = [
   {
@@ -147,9 +147,7 @@ export const allDays = [
   }
 ];
 
-// Add more dummy sessions
 export const sessions = [
-  // Beginner Course sessions
   {
     id: "session-1",
     dayId: "day-1",
@@ -184,7 +182,6 @@ export const sessions = [
     time: "4pm-6:45pm" as SessionTime
   },
   
-  // Intermediate sessions
   {
     id: "session-4",
     dayId: "day-1",
@@ -219,7 +216,6 @@ export const sessions = [
     time: "4pm-6:45pm" as SessionTime
   },
   
-  // Advanced Course sessions
   {
     id: "session-7",
     dayId: "day-2",
@@ -243,7 +239,6 @@ export const sessions = [
     time: "1pm-3:45pm" as SessionTime
   },
   
-  // Expert Racing sessions
   {
     id: "session-9",
     dayId: "day-1",
@@ -278,7 +273,6 @@ export const sessions = [
     time: "1pm-3:45pm" as SessionTime
   },
   
-  // Additional sessions
   {
     id: "session-12",
     dayId: "day-7",
@@ -325,12 +319,16 @@ export const sessions = [
   }
 ];
 
-// Add the remaining sessions following the same pattern with time property
-// For each existing session, add a time property with one of the SessionTime values
-
-// Add session types for better type checking
-export interface Session extends SessionCardProps {
+export interface Session {
   id: string;
   dayId: string;
   trackId: string;
+  title: string;
+  instructor: string;
+  type: SessionType;
+  count: number;
+  total: number;
+  time?: SessionTime;
+  customStartTime?: string;
+  customEndTime?: string;
 }
