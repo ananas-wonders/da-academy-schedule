@@ -1,5 +1,4 @@
-
-import { SessionType } from '@/components/SessionCard';
+import { SessionType, SessionTime } from '@/components/SessionCard';
 
 export const allDays = [
   {
@@ -89,7 +88,7 @@ export const allDays = [
     name: "Tuesday",
     date: "2024-07-23",
   },
-    {
+  {
     id: "day-18",
     name: "Wednesday",
     date: "2024-07-24",
@@ -159,7 +158,8 @@ export const sessions = [
     instructor: "John Smith",
     type: "online" as SessionType,
     count: 12,
-    total: 20
+    total: 20,
+    time: "9am-12pm" as SessionTime
   },
   {
     id: "session-2",
@@ -169,7 +169,8 @@ export const sessions = [
     instructor: "Maria Johnson",
     type: "offline" as SessionType,
     count: 8,
-    total: 15
+    total: 15,
+    time: "1pm-3:45pm" as SessionTime
   },
   {
     id: "session-3",
@@ -177,9 +178,10 @@ export const sessions = [
     trackId: "track-1",
     title: "Safety Rules",
     instructor: "Robert Chen",
-    type: "online",
+    type: "online" as SessionType,
     count: 25,
-    total: 30
+    total: 30,
+    time: "4pm-6:45pm" as SessionTime
   },
   
   // Intermediate sessions
@@ -189,9 +191,10 @@ export const sessions = [
     trackId: "track-2",
     title: "Cornering Mastery",
     instructor: "Lisa Williams",
-    type: "offline",
+    type: "offline" as SessionType,
     count: 10,
-    total: 12
+    total: 12,
+    time: "9am-12pm" as SessionTime
   },
   {
     id: "session-5",
@@ -199,9 +202,10 @@ export const sessions = [
     trackId: "track-2",
     title: "Braking Techniques",
     instructor: "Michael Brown",
-    type: "offline",
+    type: "offline" as SessionType,
     count: 7,
-    total: 10
+    total: 10,
+    time: "1pm-3:45pm" as SessionTime
   },
   {
     id: "session-6",
@@ -209,9 +213,10 @@ export const sessions = [
     trackId: "track-2",
     title: "Racing Lines",
     instructor: "Sarah Davis",
-    type: "online",
+    type: "online" as SessionType,
     count: 15,
-    total: 20
+    total: 20,
+    time: "4pm-6:45pm" as SessionTime
   },
   
   // Advanced Course sessions
@@ -221,9 +226,10 @@ export const sessions = [
     trackId: "track-3",
     title: "Advanced Tactics",
     instructor: "James Wilson",
-    type: "offline",
+    type: "offline" as SessionType,
     count: 8,
-    total: 8
+    total: 8,
+    time: "9am-12pm" as SessionTime
   },
   {
     id: "session-8",
@@ -231,9 +237,10 @@ export const sessions = [
     trackId: "track-3",
     title: "Race Simulation",
     instructor: "Emily Taylor",
-    type: "online",
+    type: "online" as SessionType,
     count: 12,
-    total: 15
+    total: 15,
+    time: "1pm-3:45pm" as SessionTime
   },
   
   // Expert Racing sessions
@@ -243,9 +250,10 @@ export const sessions = [
     trackId: "track-4",
     title: "Pro Racing Workshop",
     instructor: "Daniel Martinez",
-    type: "offline",
+    type: "offline" as SessionType,
     count: 6,
-    total: 6
+    total: 6,
+    time: "4pm-6:45pm" as SessionTime
   },
   {
     id: "session-10",
@@ -253,9 +261,10 @@ export const sessions = [
     trackId: "track-4",
     title: "Championship Prep",
     instructor: "Olivia Anderson",
-    type: "offline",
+    type: "offline" as SessionType,
     count: 4,
-    total: 5
+    total: 5,
+    time: "9am-12pm" as SessionTime
   },
   {
     id: "session-11",
@@ -263,9 +272,10 @@ export const sessions = [
     trackId: "track-4",
     title: "Advanced Analytics",
     instructor: "Noah Thompson",
-    type: "online",
+    type: "online" as SessionType,
     count: 8,
-    total: 10
+    total: 10,
+    time: "1pm-3:45pm" as SessionTime
   },
   
   // Additional sessions
@@ -275,9 +285,10 @@ export const sessions = [
     trackId: "track-1",
     title: "Weekend Basics",
     instructor: "Sophia Lee",
-    type: "offline",
+    type: "offline" as SessionType,
     count: 18,
-    total: 20
+    total: 20,
+    time: "4pm-6:45pm" as SessionTime
   },
   {
     id: "session-13",
@@ -285,9 +296,10 @@ export const sessions = [
     trackId: "track-3",
     title: "Weekend Advanced",
     instructor: "William Garcia",
-    type: "online",
+    type: "online" as SessionType,
     count: 9,
-    total: 15
+    total: 15,
+    time: "9am-12pm" as SessionTime
   },
   {
     id: "session-14",
@@ -295,9 +307,10 @@ export const sessions = [
     trackId: "track-2",
     title: "Intermediate Challenge",
     instructor: "Ava Nelson",
-    type: "offline",
+    type: "offline" as SessionType,
     count: 10,
-    total: 12
+    total: 12,
+    time: "1pm-3:45pm" as SessionTime
   },
   {
     id: "session-15",
@@ -305,8 +318,19 @@ export const sessions = [
     trackId: "track-4",
     title: "Expert Speed Session",
     instructor: "Ethan Wright",
-    type: "offline",
+    type: "offline" as SessionType,
     count: 5,
-    total: 6
+    total: 6,
+    time: "4pm-6:45pm" as SessionTime
   }
 ];
+
+// Add the remaining sessions following the same pattern with time property
+// For each existing session, add a time property with one of the SessionTime values
+
+// Add session types for better type checking
+export interface Session extends SessionCardProps {
+  id: string;
+  dayId: string;
+  trackId: string;
+}

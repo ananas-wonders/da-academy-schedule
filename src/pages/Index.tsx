@@ -1,10 +1,9 @@
 
 import React, { useState } from 'react';
-import ScheduleGrid, { ViewDensity, Track, Session } from '@/components/ScheduleGrid';
-import { allDays, sessions } from '@/data/scheduleData';
+import ScheduleGrid, { ViewDensity, Track } from '@/components/ScheduleGrid';
+import { allDays, sessions, Session } from '@/data/scheduleData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Toaster } from "@/components/ui/toaster";
-import { SessionType } from '@/components/SessionCard';
 
 const Index = () => {
   const [viewDensity, setViewDensity] = useState<ViewDensity>('2weeks');

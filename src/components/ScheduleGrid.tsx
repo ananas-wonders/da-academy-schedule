@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import SessionCard, { SessionCardProps, SessionType } from './SessionCard';
+import SessionCard, { SessionCardProps, SessionType, SessionTime } from './SessionCard';
 import { cn } from '@/lib/utils';
 import { Edit, GripHorizontal, Plus, FolderPlus, Settings, Eye, EyeOff, Palette } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -15,6 +14,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 export interface Track {
   id: string;
@@ -51,7 +52,6 @@ interface ScheduleGridProps {
   viewDensity: ViewDensity;
 }
 
-// SortableTrack component for drag and drop
 const SortableTrack = ({ 
   track, 
   onEditName, 
@@ -143,6 +143,23 @@ const EditSessionDialog = ({
   onOpenChange: (open: boolean) => void
 }) => {
   const [editedSession, setEditedSession] = useState<Session | null>(null);
+  const [courseOptions, setCourseOptions] = useState<{ id: string, title: string }[]>([]);
+  const [instructorOptions, setInstructorOptions] = useState<{ id: string, name: string }[]>([]);
+
+  React.useEffect(() => {
+    const loadData = () => {
+      try {
+        const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+        const instructors = JSON.parse(localStorage.getItem('instructors') || '[]');
+        setCourseOptions(courses.map((c: any) => ({ id: c.id, title: c.title })));
+        setInstructorOptions(instructors.map((i: any) => ({ id: i.id, name: i.name })));
+      } catch (e) {
+        console.error('Error loading data:', e);
+      }
+    };
+
+    loadData();
+  }, []);
 
   React.useEffect(() => {
     if (session) {
@@ -169,44 +186,105 @@ const EditSessionDialog = ({
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="edit-title">Session Title</Label>
-            <Input
-              id="edit-title"
-              value={editedSession.title}
-              onChange={(e) => handleChange('title', e.target.value)}
-            />
+            <Label htmlFor="edit-title">Course</Label>
+            <Select 
+              value={editedSession.title} 
+              onValueChange={(value) => handleChange('title', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select course" />
+              </SelectTrigger>
+              <SelectContent>
+                {courseOptions.map(course => (
+                  <SelectItem key={course.id} value={course.title}>{course.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-instructor">Instructor</Label>
-            <Input
-              id="edit-instructor"
-              value={editedSession.instructor}
-              onChange={(e) => handleChange('instructor', e.target.value)}
-            />
+            <Select 
+              value={editedSession.instructor} 
+              onValueChange={(value) => handleChange('instructor', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select instructor" />
+              </SelectTrigger>
+              <SelectContent>
+                {instructorOptions.map(instructor => (
+                  <SelectItem key={instructor.id} value={instructor.name}>{instructor.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label>Session Type</Label>
-            <div className="flex space-x-4">
+            <RadioGroup 
+              value={editedSession.type} 
+              onValueChange={(value) => handleChange('type', value as SessionType)}
+              className="flex gap-4"
+            >
               <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="edit-type-online"
-                  checked={editedSession.type === 'online'}
-                  onChange={() => handleChange('type', 'online')}
-                />
-                <Label htmlFor="edit-type-online">Online</Label>
+                <RadioGroupItem value="online" id="edit-online" />
+                <Label htmlFor="edit-online">🌐 Online</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="edit-type-offline"
-                  checked={editedSession.type === 'offline'}
-                  onChange={() => handleChange('type', 'offline')}
+                <RadioGroupItem value="offline" id="edit-offline" />
+                <Label htmlFor="edit-offline">🏫 Offline</Label>
+              </div>
+            </RadioGroup>
+          </div>
+          <div className="space-y-2">
+            <Label>Session Time</Label>
+            <RadioGroup 
+              value={editedSession.time || '9am-12pm'} 
+              onValueChange={(value) => handleChange('time', value as SessionTime)}
+              className="grid grid-cols-2 gap-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="9am-12pm" id="edit-morning" />
+                <Label htmlFor="edit-morning">9am - 12pm</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="1pm-3:45pm" id="edit-afternoon" />
+                <Label htmlFor="edit-afternoon">1pm - 3:45pm</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="4pm-6:45pm" id="edit-evening" />
+                <Label htmlFor="edit-evening">4pm - 6:45pm</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="custom" id="edit-custom" />
+                <Label htmlFor="edit-custom">Custom</Label>
+              </div>
+            </RadioGroup>
+          </div>
+          
+          {editedSession.time === 'custom' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-startTime">Start Time</Label>
+                <Input
+                  id="edit-startTime"
+                  type="time"
+                  value={editedSession.customStartTime || ''}
+                  onChange={(e) => handleChange('customStartTime', e.target.value)}
+                  required
                 />
-                <Label htmlFor="edit-type-offline">Offline</Label>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-endTime">End Time</Label>
+                <Input
+                  id="edit-endTime"
+                  type="time"
+                  value={editedSession.customEndTime || ''}
+                  onChange={(e) => handleChange('customEndTime', e.target.value)}
+                  required
+                />
               </div>
             </div>
-          </div>
+          )}
+          
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="edit-count">Current Count</Label>
@@ -324,18 +402,16 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     useSensor(KeyboardSensor)
   );
 
-  // Filter visible tracks based on their group visibility
   const visibleTracks = tracks.filter(track => {
     if (!track.groupId) return true;
     const group = groups.find(g => g.id === track.groupId);
     return group ? group.visible !== false : true;
   });
 
-  // Function to get sessions for a specific day and track
   const getSessionsForCell = (dayId: string, trackId: string) => {
     return sessions.filter(
       session => session.dayId === dayId && session.trackId === trackId
-    ).slice(0, 5); // Limit to 5 cards per cell
+    ).slice(0, 5);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -388,7 +464,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
       visible: true
     }]);
     
-    // Update selected tracks to be part of this group
     setTracks(tracks.map(track => 
       selectedTracks.includes(track.id) ? { ...track, groupId: newGroupId } : track
     ));
@@ -467,13 +542,11 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     return colors[Math.floor(Math.random() * colors.length)];
   };
 
-  // Get group for a track
   const getTrackGroup = (track: Track) => {
     if (!track.groupId) return null;
     return groups.find(g => g.id === track.groupId) || null;
   };
 
-  // Flatten the grouped tracks for rendering
   const trackIds = visibleTracks.map(track => track.id);
 
   return (
@@ -641,6 +714,9 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
                             type={session.type}
                             count={session.count}
                             total={session.total}
+                            time={session.time}
+                            customStartTime={session.customStartTime}
+                            customEndTime={session.customEndTime}
                           />
                         </div>
                       ))}
