@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import ScheduleGrid, { ViewDensity, Track } from '@/components/ScheduleGrid';
 import { Session } from '@/data/scheduleData';
@@ -44,7 +43,6 @@ const Index = () => {
   const [trackVisibility, setTrackVisibility] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   
-  // Time range options for the view filter
   const timeRangeOptions = [
     { value: 'week', label: 'Week' },
     { value: '2weeks', label: '2 Weeks' },
@@ -54,17 +52,14 @@ const Index = () => {
   ];
   
   useEffect(() => {
-    // Fetch tracks and sessions data from Supabase
     const fetchData = async () => {
       try {
-        // Fetch tracks
         const { data: tracksData, error: tracksError } = await supabase
           .from('tracks')
-          .select('*, track_groups(*)');
+          .select('*');
 
         if (tracksError) throw tracksError;
 
-        // Format tracks data
         const formattedTracks = tracksData.map((track: any) => ({
           id: track.id,
           name: track.name,
@@ -74,21 +69,18 @@ const Index = () => {
 
         setTracks(formattedTracks);
         
-        // Initialize track visibility state
         const visibilityState = tracksData.reduce((acc: Record<string, boolean>, track: any) => {
           acc[track.id] = track.visible;
           return acc;
         }, {});
         setTrackVisibility(visibilityState);
 
-        // Fetch sessions
         const { data: sessionsData, error: sessionsError } = await supabase
           .from('sessions')
           .select('*');
 
         if (sessionsError) throw sessionsError;
 
-        // Format sessions data
         const formattedSessions = sessionsData.map((session: any) => ({
           id: session.id,
           dayId: session.day_id,
@@ -125,7 +117,7 @@ const Index = () => {
     
     switch (viewDensity) {
       case 'week':
-        start = startOfWeek(baseDate, { weekStartsOn: 1 }); // Week starts on Monday
+        start = startOfWeek(baseDate, { weekStartsOn: 1 });
         end = endOfWeek(baseDate, { weekStartsOn: 1 });
         break;
       case '2weeks':
@@ -184,13 +176,11 @@ const Index = () => {
 
   const handleToggleTrackVisibility = async (trackId: string, visible: boolean) => {
     try {
-      // Update the visibility state locally
       setTrackVisibility(prev => ({
         ...prev,
         [trackId]: visible
       }));
       
-      // Update the visibility in the database
       const { error } = await supabase
         .from('tracks')
         .update({ visible })
@@ -198,7 +188,6 @@ const Index = () => {
         
       if (error) throw error;
       
-      // Update the tracks state
       setTracks(prev => 
         prev.map(track => 
           track.id === trackId ? { ...track, visible } : track
@@ -231,11 +220,9 @@ const Index = () => {
     });
   };
 
-  // Generate years for selector (current year +/- 10 years)
   const currentYear = getYear(new Date());
   const years = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
   
-  // Format current view time range for display
   const getTimeRangeDisplay = () => {
     switch (viewDensity) {
       case 'week':
@@ -251,7 +238,6 @@ const Index = () => {
     }
   };
   
-  // Filter tracks based on visibility
   const visibleTracks = tracks.filter(track => trackVisibility[track.id] !== false);
 
   return (

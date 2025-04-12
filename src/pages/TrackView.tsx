@@ -48,7 +48,7 @@ const TrackView = () => {
 
   const fetchTrackData = async () => {
     try {
-      // Fetch track info
+      // Fetch track info - simplified the query to avoid relationship errors
       const { data: trackData, error: trackError } = await supabase
         .from('tracks')
         .select('id, name')
