@@ -10,8 +10,8 @@ export interface SessionCardProps {
   title: string;
   instructor: string;
   type: SessionType;
-  count: number;
-  total: number;
+  count?: number;
+  total?: number;
   time?: SessionTime;
   customStartTime?: string;
   customEndTime?: string;
@@ -21,8 +21,8 @@ const SessionCard: React.FC<SessionCardProps> = ({
   title,
   instructor,
   type,
-  count,
-  total,
+  count = 0,
+  total = 0,
   time,
   customStartTime,
   customEndTime

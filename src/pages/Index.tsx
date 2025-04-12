@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import ScheduleGrid, { ViewDensity, Track } from '@/components/ScheduleGrid';
 import { Session } from '@/data/scheduleData';
@@ -75,6 +76,7 @@ const Index = () => {
         }, {});
         setTrackVisibility(visibilityState);
 
+        // Get sessions and properly map the fields
         const { data: sessionsData, error: sessionsError } = await supabase
           .from('sessions')
           .select('*');
@@ -91,8 +93,8 @@ const Index = () => {
           time: session.time,
           customStartTime: session.custom_start_time,
           customEndTime: session.custom_end_time,
-          count: session.count,
-          total: session.total
+          count: session.count || 0,
+          total: session.total || 0
         }));
 
         setSessions(formattedSessions);

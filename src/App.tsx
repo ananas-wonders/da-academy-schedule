@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -92,6 +91,7 @@ const AppRoutes = () => {
       <Route path="/courses" element={<ProtectedRoute><CourseLists /></ProtectedRoute>} />
       <Route path="/instructors" element={<ProtectedRoute><InstructorDetails /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+      {/* Track view is now public - no ProtectedRoute wrapper */}
       <Route path="/track/:trackId" element={<TrackView />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

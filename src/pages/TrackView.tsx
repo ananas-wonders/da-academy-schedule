@@ -48,7 +48,7 @@ const TrackView = () => {
 
   const fetchTrackData = async () => {
     try {
-      // Fetch track info - simplified the query to avoid relationship errors
+      // Fetch track info - simplified the query
       const { data: trackData, error: trackError } = await supabase
         .from('tracks')
         .select('id, name')
@@ -58,17 +58,31 @@ const TrackView = () => {
       if (trackError) throw trackError;
       setTrack(trackData);
 
-      // Fetch sessions for this track
+      // Fetch sessions for this track with proper field mapping
       const { data: sessionData, error: sessionError } = await supabase
         .from('sessions')
         .select('*')
         .eq('track_id', trackId);
 
       if (sessionError) throw sessionError;
-      setSessions(sessionData);
+      
+      const formattedSessions = sessionData.map(session => ({
+        id: session.id,
+        day_id: session.day_id,
+        title: session.title,
+        instructor: session.instructor,
+        type: session.type,
+        time: session.time,
+        customStartTime: session.custom_start_time,
+        customEndTime: session.custom_end_time,
+        count: session.count || 0,
+        total: session.total || 0
+      }));
+      
+      setSessions(formattedSessions);
 
       // Get unique day IDs from sessions
-      const uniqueDayIds = [...new Set(sessionData.map(session => session.day_id))];
+      const uniqueDayIds = [...new Set(formattedSessions.map(session => session.day_id))];
       
       // Process days from day_ids (which should be in format 'YYYY-MM-DD')
       const processedDays = uniqueDayIds.map(dayId => {
