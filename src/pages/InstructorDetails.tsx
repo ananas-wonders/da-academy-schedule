@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Edit, Trash, Plus, Search, WhatsApp } from 'lucide-react';
+import { Edit, Trash, Plus, Search, MessageCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -21,7 +20,6 @@ type Instructor = {
   imageUrl?: string;
 };
 
-// Mock data for instructors
 const initialInstructors: Instructor[] = [
   { 
     id: 'instructor-1', 
@@ -90,7 +88,6 @@ const InstructorDetails = () => {
   });
   const [newSpecialization, setNewSpecialization] = useState('');
 
-  // Save to localStorage whenever instructors change
   React.useEffect(() => {
     localStorage.setItem('instructors', JSON.stringify(instructors));
   }, [instructors]);
@@ -404,7 +401,7 @@ const InstructorDetails = () => {
                       rel="noopener noreferrer"
                       className="text-green-500 hover:text-green-700"
                     >
-                      <WhatsApp className="h-5 w-5" />
+                      <MessageCircle className="h-5 w-5" />
                     </a>
                   )}
                 </div>
@@ -492,7 +489,7 @@ const InstructorDetails = () => {
                           rel="noopener noreferrer"
                           className="ml-2 text-green-500 hover:text-green-700"
                         >
-                          <WhatsApp className="h-4 w-4" />
+                          <MessageCircle className="h-4 w-4" />
                         </a>
                       )}
                     </div>

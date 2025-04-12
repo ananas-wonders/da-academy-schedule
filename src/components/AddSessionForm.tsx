@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
-import { WhatsApp, Search } from 'lucide-react';
+import { MessageCircle, Search } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -193,7 +193,7 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ day, track, onAddSessio
                             onClick={(e) => e.stopPropagation()}
                             className="text-green-500 hover:text-green-700"
                           >
-                            <WhatsApp size={16} />
+                            <MessageCircle size={16} />
                           </a>
                         )}
                       </div>
