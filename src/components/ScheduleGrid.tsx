@@ -949,3 +949,100 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
                       groupColor={group?.color}
                       grouped={!!track.groupId}
                       onToggleVisibility={handleToggleTrackVisibility}
+                      onCopyLink={handleCopyTrackLink}
+                    />
+                  );
+                })}
+              </SortableContext>
+            </tr>
+          </thead>
+          <tbody>
+            {days.map(day => (
+              <tr key={day.id} className={cn(
+                "h-auto border-b border-gray-200",
+                day.isFriday && "bg-blue-50/50"
+              )}>
+                <td className="border-r border-gray-200 p-3 align-top">
+                  <div className="text-sm font-medium">{day.name}</div>
+                  <div className="text-xs text-gray-500">{day.date}</div>
+                  {isSameDay(day.fullDate, today) && (
+                    <div className="mt-1">
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-green-500 text-white">
+                        Today
+                      </span>
+                    </div>
+                  )}
+                </td>
+                
+                {visibleTracks.map(track => (
+                  <td 
+                    key={`${day.id}-${track.id}`} 
+                    className="border-r border-gray-200 p-2 align-top"
+                  >
+                    <div className="space-y-2">
+                      {getSessionsForCell(day.id, track.id).map(session => (
+                        <div 
+                          key={session.id}
+                          className={cn(
+                            "cursor-pointer",
+                            hasConflict(session) && "border-l-4 border-red-500"
+                          )}
+                          onClick={() => handleEditSession(session.id)}
+                        >
+                          <SessionCard 
+                            title={session.title}
+                            instructor={session.instructor}
+                            type={session.type}
+                            time={session.time}
+                            customStartTime={session.customStartTime}
+                            customEndTime={session.customEndTime}
+                            count={session.count}
+                            total={session.total}
+                          />
+                        </div>
+                      ))}
+                      
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="w-full justify-center text-gray-400 hover:text-gray-700"
+                          >
+                            <Plus className="h-4 w-4" />
+                            <span className="ml-1 text-xs">Add Session</span>
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-72" align="center">
+                          <AddSessionForm 
+                            onSubmit={(sessionData) => handleAddSession(day.id, track.id, sessionData)}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        
+        <div className="flex justify-end mt-4">
+          <Button onClick={handleAddTrack} size="sm">
+            <FolderPlus className="mr-2 h-4 w-4" />
+            Add Track
+          </Button>
+        </div>
+      </DndContext>
+      
+      <EditSessionDialog 
+        session={editingSession}
+        onSave={handleSaveEditedSession}
+        open={sessionDialogOpen}
+        onOpenChange={setSessionDialogOpen}
+      />
+    </div>
+  );
+};
+
+export default ScheduleGrid;
