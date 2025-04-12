@@ -9,16 +9,203 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      sessions: {
+        Row: {
+          count: number | null
+          created_at: string
+          custom_end_time: string | null
+          custom_start_time: string | null
+          day_id: string
+          id: string
+          instructor: string | null
+          time: string | null
+          title: string
+          total: number | null
+          track_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          count?: number | null
+          created_at?: string
+          custom_end_time?: string | null
+          custom_start_time?: string | null
+          day_id: string
+          id: string
+          instructor?: string | null
+          time?: string | null
+          title: string
+          total?: number | null
+          track_id: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          count?: number | null
+          created_at?: string
+          custom_end_time?: string | null
+          custom_start_time?: string | null
+          day_id?: string
+          id?: string
+          instructor?: string | null
+          time?: string | null
+          title?: string
+          total?: number | null
+          track_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      track_groups: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          visible: boolean
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id: string
+          name: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Relationships: []
+      }
+      track_permissions: {
+        Row: {
+          can_edit: boolean
+          can_view: boolean
+          created_at: string
+          id: string
+          track_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          id?: string
+          track_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          id?: string
+          track_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tracks: {
+        Row: {
+          created_at: string
+          group_id: string | null
+          id: string
+          name: string
+          updated_at: string
+          visible: boolean
+        }
+        Insert: {
+          created_at?: string
+          group_id?: string | null
+          id: string
+          name: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Update: {
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      user_role: "admin" | "manager" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +320,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: ["admin", "manager", "viewer"],
+    },
   },
 } as const

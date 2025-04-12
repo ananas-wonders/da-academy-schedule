@@ -1,11 +1,10 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import SessionCard, { SessionCardProps, SessionType, SessionTime } from './SessionCard';
 import { cn } from '@/lib/utils';
-import { Edit, GripHorizontal, Plus, FolderPlus, Settings, Eye, EyeOff, Palette, ChevronLeft, ChevronRight, Calendar, Search, MessageCircle } from 'lucide-react';
+import { Edit, GripHorizontal, Plus, FolderPlus, Settings, Eye, EyeOff, Palette, ChevronLeft, ChevronRight, Calendar, Search, MessageCircle, Link as LinkIcon } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,11 +19,14 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isFriday, addMonths, subMonths, setMonth, setYear, getMonth, getYear } from 'date-fns';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { supabase } from '@/integrations/supabase/client';
+import { Link } from 'react-router-dom';
 
 export interface Track {
   id: string;
   name: string;
   groupId?: string;
+  visible?: boolean;
 }
 
 export interface TrackGroup {
@@ -48,7 +50,7 @@ export interface Session extends SessionCardProps {
   trackId: string;
 }
 
-export type ViewDensity = '1week' | '2weeks' | 'month' | '2months';
+export type ViewDensity = '1week' | '2weeks' | 'month' | '2months' | 'week' | 'custom';
 
 interface ScheduleGridProps {
   days: Day[];
@@ -62,13 +64,17 @@ const SortableTrack = ({
   onEditName, 
   groupName,
   groupColor = '#e2e8f0',
-  grouped = false
+  grouped = false,
+  onToggleVisibility,
+  onCopyLink
 }: { 
   track: Track; 
   onEditName: (id: string, name: string) => void;
   groupName?: string;
   groupColor?: string;
   grouped?: boolean;
+  onToggleVisibility?: (id: string, visible: boolean) => void;
+  onCopyLink?: (id: string, name: string) => void;
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(track.name);
@@ -115,21 +121,43 @@ const SortableTrack = ({
       ) : (
         <div className="flex items-center justify-center gap-2">
           <span>{track.name}</span>
-          <button 
-            onClick={() => setIsEditing(true)} 
-            className="p-1 rounded-full hover:bg-gray-200 transition-colors"
-            title="Edit track name"
-          >
-            <Edit size={14} />
-          </button>
-          <button 
-            {...attributes} 
-            {...listeners}
-            className="p-1 cursor-move rounded-full hover:bg-gray-200 transition-colors"
-            title="Drag to reorder"
-          >
-            <GripHorizontal size={14} />
-          </button>
+          <div className="flex items-center">
+            <button 
+              onClick={() => setIsEditing(true)} 
+              className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+              title="Edit track name"
+            >
+              <Edit size={14} />
+            </button>
+            <button 
+              {...attributes} 
+              {...listeners}
+              className="p-1 cursor-move rounded-full hover:bg-gray-200 transition-colors"
+              title="Drag to reorder"
+            >
+              <GripHorizontal size={14} />
+            </button>
+            
+            {onToggleVisibility && (
+              <button 
+                onClick={() => onToggleVisibility(track.id, !(track.visible !== false))} 
+                className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+                title={track.visible !== false ? "Hide track" : "Show track"}
+              >
+                {track.visible !== false ? <Eye size={14} /> : <EyeOff size={14} />}
+              </button>
+            )}
+            
+            {onCopyLink && (
+              <button 
+                onClick={() => onCopyLink(track.id, track.name)} 
+                className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+                title="Copy track link"
+              >
+                <LinkIcon size={14} />
+              </button>
+            )}
+          </div>
         </div>
       )}
     </th>
@@ -469,56 +497,43 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     useSensor(KeyboardSensor)
   );
 
-  React.useEffect(() => {
-    // Generate days based on the current month and view density
-    const today = new Date();
-    generateDays(currentMonth);
-  }, [currentMonth, viewDensity, showMultipleMonths]);
-
-  const generateDays = (baseDate: Date) => {
-    const start = startOfMonth(baseDate);
-    let end;
+  useEffect(() => {
+    // Set days from props
+    setDays(initialDays);
     
-    if (showMultipleMonths) {
-      // Show 2 months if showMultipleMonths is enabled
-      end = endOfMonth(addMonths(start, 1));
-    } else {
-      end = endOfMonth(start);
+    // Set tracks from props
+    setTracks(initialTracks);
+    
+    // Set sessions from props
+    setSessions(initialSessions);
+    
+    // Fetch track groups
+    fetchTrackGroups();
+  }, [initialDays, initialTracks, initialSessions]);
+
+  const fetchTrackGroups = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('track_groups')
+        .select('*');
+        
+      if (error) throw error;
+      
+      setGroups(data.map(group => ({
+        id: group.id,
+        name: group.name,
+        color: group.color,
+        visible: group.visible
+      })));
+    } catch (error) {
+      console.error('Error fetching track groups:', error);
     }
-
-    const daysArray = eachDayOfInterval({ start, end });
-    
-    const formattedDays: Day[] = daysArray.map(day => ({
-      id: format(day, 'yyyy-MM-dd'),
-      name: format(day, 'EEEE'),
-      date: format(day, 'MMM d, yyyy'),
-      fullDate: day,
-      isFriday: isFriday(day)
-    }));
-
-    setDays(formattedDays);
-  };
-
-  const handlePreviousMonth = () => {
-    setCurrentMonth(prev => subMonths(prev, 1));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentMonth(prev => addMonths(prev, 1));
-  };
-
-  const handleMonthChange = (month: number) => {
-    setCurrentMonth(prev => setMonth(prev, month));
-  };
-
-  const handleYearChange = (year: number) => {
-    setCurrentMonth(prev => setYear(prev, year));
   };
 
   const visibleTracks = tracks.filter(track => {
-    if (!track.groupId) return true;
+    if (!track.groupId) return track.visible !== false;
     const group = groups.find(g => g.id === track.groupId);
-    return group ? group.visible !== false : true;
+    return group ? (group.visible !== false && track.visible !== false) : (track.visible !== false);
   });
 
   const getSessionsForCell = (dayId: string, trackId: string) => {
@@ -538,7 +553,7 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     );
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
     if (over && active.id !== over.id) {
@@ -549,6 +564,8 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         return arrayMove(items, oldIndex, newIndex);
       });
 
+      // Update order in database (if needed in the future)
+
       toast({
         title: "Track order updated",
         description: "The track order has been successfully updated",
@@ -556,86 +573,269 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     }
   };
 
-  const handleEditTrackName = (id: string, newName: string) => {
-    setTracks(tracks.map(track => 
-      track.id === id ? { ...track, name: newName } : track
-    ));
+  const handleEditTrackName = async (id: string, newName: string) => {
+    try {
+      // Update in database
+      const { error } = await supabase
+        .from('tracks')
+        .update({ name: newName })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setTracks(tracks.map(track => 
+        track.id === id ? { ...track, name: newName } : track
+      ));
 
-    toast({
-      title: "Track renamed",
-      description: `Track has been renamed to "${newName}"`,
-    });
+      toast({
+        title: "Track renamed",
+        description: `Track has been renamed to "${newName}"`,
+      });
+    } catch (error) {
+      console.error('Error updating track name:', error);
+      toast({
+        variant: "destructive",
+        title: "Error updating track",
+        description: "Failed to update track name",
+      });
+    }
   };
 
-  const handleAddTrack = () => {
-    const newId = `track-${Date.now()}`;
-    setTracks([...tracks, { id: newId, name: `New Track ${tracks.length + 1}` }]);
-    
-    toast({
-      title: "Track added",
-      description: "A new track has been added to the schedule",
-    });
+  const handleAddTrack = async () => {
+    try {
+      const newId = `track-${Date.now()}`;
+      const newName = `New Track ${tracks.length + 1}`;
+      
+      // Add to database
+      const { error } = await supabase
+        .from('tracks')
+        .insert([{ id: newId, name: newName, visible: true }]);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setTracks([...tracks, { id: newId, name: newName, visible: true }]);
+      
+      toast({
+        title: "Track added",
+        description: "A new track has been added to the schedule",
+      });
+    } catch (error) {
+      console.error('Error adding track:', error);
+      toast({
+        variant: "destructive",
+        title: "Error adding track",
+        description: "Failed to add new track",
+      });
+    }
   };
 
-  const handleCreateGroup = () => {
+  const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return;
     
-    const newGroupId = `group-${Date.now()}`;
-    setGroups([...groups, { 
-      id: newGroupId, 
-      name: newGroupName,
-      color: getRandomColor(),
-      visible: true
-    }]);
-    
-    setTracks(tracks.map(track => 
-      selectedTracks.includes(track.id) ? { ...track, groupId: newGroupId } : track
-    ));
-    
-    setNewGroupName('');
-    setSelectedTracks([]);
-    
-    toast({
-      title: "Track group created",
-      description: `"${newGroupName}" group has been created with the selected tracks`,
+    try {
+      const newGroupId = `group-${Date.now()}`;
+      const newGroup = { 
+        id: newGroupId, 
+        name: newGroupName,
+        color: getRandomColor(),
+        visible: true
+      };
+      
+      // Add group to database
+      const { error: groupError } = await supabase
+        .from('track_groups')
+        .insert([newGroup]);
+        
+      if (groupError) throw groupError;
+      
+      // Update tracks with group assignment
+      for (const trackId of selectedTracks) {
+        const { error: trackError } = await supabase
+          .from('tracks')
+          .update({ group_id: newGroupId })
+          .eq('id', trackId);
+          
+        if (trackError) throw trackError;
+      }
+      
+      // Update local state
+      setGroups([...groups, newGroup]);
+      
+      setTracks(tracks.map(track => 
+        selectedTracks.includes(track.id) ? { ...track, groupId: newGroupId } : track
+      ));
+      
+      setNewGroupName('');
+      setSelectedTracks([]);
+      
+      toast({
+        title: "Track group created",
+        description: `"${newGroupName}" group has been created with the selected tracks`,
+      });
+    } catch (error) {
+      console.error('Error creating group:', error);
+      toast({
+        variant: "destructive",
+        title: "Error creating group",
+        description: "Failed to create track group",
+      });
+    }
+  };
+
+  const handleUpdateGroups = async (updatedGroups: TrackGroup[]) => {
+    try {
+      // Update each group in the database
+      for (const group of updatedGroups) {
+        const { error } = await supabase
+          .from('track_groups')
+          .update({ 
+            name: group.name,
+            color: group.color,
+            visible: group.visible
+          })
+          .eq('id', group.id);
+          
+        if (error) throw error;
+      }
+      
+      // Update local state
+      setGroups(updatedGroups);
+      
+      toast({
+        title: "Groups updated",
+        description: "Track groups have been successfully updated",
+      });
+    } catch (error) {
+      console.error('Error updating groups:', error);
+      toast({
+        variant: "destructive",
+        title: "Error updating groups",
+        description: "Failed to update track groups",
+      });
+    }
+  };
+
+  const handleToggleGroupVisibility = async (groupId: string, visible: boolean) => {
+    try {
+      // Update in database
+      const { error } = await supabase
+        .from('track_groups')
+        .update({ visible })
+        .eq('id', groupId);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setGroups(groups.map(group => 
+        group.id === groupId ? { ...group, visible } : group
+      ));
+      
+      toast({
+        title: visible ? "Group shown" : "Group hidden",
+        description: `Group is now ${visible ? 'visible' : 'hidden'} in the schedule`,
+      });
+    } catch (error) {
+      console.error('Error updating group visibility:', error);
+      toast({
+        variant: "destructive",
+        title: "Error updating visibility",
+        description: "Failed to update group visibility",
+      });
+    }
+  };
+
+  const handleToggleTrackVisibility = async (trackId: string, visible: boolean) => {
+    try {
+      // Update in database
+      const { error } = await supabase
+        .from('tracks')
+        .update({ visible })
+        .eq('id', trackId);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setTracks(tracks.map(track => 
+        track.id === trackId ? { ...track, visible } : track
+      ));
+      
+      toast({
+        title: visible ? "Track shown" : "Track hidden",
+        description: `Track is now ${visible ? 'visible' : 'hidden'} in the schedule`,
+      });
+    } catch (error) {
+      console.error('Error updating track visibility:', error);
+      toast({
+        variant: "destructive",
+        title: "Error updating visibility",
+        description: "Failed to update track visibility",
+      });
+    }
+  };
+  
+  const handleCopyTrackLink = (trackId: string, trackName: string) => {
+    const url = `${window.location.origin}/track/${trackId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      toast({
+        title: "Link copied",
+        description: `Link to ${trackName} schedule has been copied to clipboard`,
+      });
+    }).catch(err => {
+      console.error('Error copying text: ', err);
+      toast({
+        variant: "destructive",
+        title: "Error copying link",
+        description: "Failed to copy track link to clipboard",
+      });
     });
   };
 
-  const handleUpdateGroups = (updatedGroups: TrackGroup[]) => {
-    setGroups(updatedGroups);
-    
-    toast({
-      title: "Groups updated",
-      description: "Track groups have been successfully updated",
-    });
-  };
-
-  const handleToggleGroupVisibility = (groupId: string, visible: boolean) => {
-    setGroups(groups.map(group => 
-      group.id === groupId ? { ...group, visible } : group
-    ));
-    
-    toast({
-      title: visible ? "Group shown" : "Group hidden",
-      description: `Group is now ${visible ? 'visible' : 'hidden'} in the schedule`,
-    });
-  };
-
-  const handleAddSession = (dayId: string, trackId: string, newSession: Omit<SessionCardProps, 'id'>) => {
-    const sessionId = `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    const session: Session = {
-      id: sessionId,
-      dayId,
-      trackId,
-      ...newSession
-    };
-    
-    setSessions([...sessions, session]);
-    
-    toast({
-      title: "Session added",
-      description: `A new session "${newSession.title}" has been added to the schedule`,
-    });
+  const handleAddSession = async (dayId: string, trackId: string, newSession: Omit<SessionCardProps, 'id'>) => {
+    try {
+      const sessionId = `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      const session: Session = {
+        id: sessionId,
+        dayId,
+        trackId,
+        ...newSession
+      };
+      
+      // Add to database
+      const { error } = await supabase
+        .from('sessions')
+        .insert([{
+          id: sessionId,
+          day_id: dayId,
+          track_id: trackId,
+          title: newSession.title,
+          instructor: newSession.instructor,
+          type: newSession.type,
+          time: newSession.time,
+          custom_start_time: newSession.customStartTime,
+          custom_end_time: newSession.customEndTime,
+          count: newSession.count,
+          total: newSession.total
+        }]);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setSessions([...sessions, session]);
+      
+      toast({
+        title: "Session added",
+        description: `A new session "${newSession.title}" has been added to the schedule`,
+      });
+    } catch (error) {
+      console.error('Error adding session:', error);
+      toast({
+        variant: "destructive",
+        title: "Error adding session",
+        description: "Failed to add new session",
+      });
+    }
   };
 
   const handleEditSession = (sessionId: string) => {
@@ -646,15 +846,42 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     }
   };
 
-  const handleSaveEditedSession = (updatedSession: Session) => {
-    setSessions(sessions.map(session => 
-      session.id === updatedSession.id ? updatedSession : session
-    ));
-    
-    toast({
-      title: "Session updated",
-      description: `The session "${updatedSession.title}" has been updated`,
-    });
+  const handleSaveEditedSession = async (updatedSession: Session) => {
+    try {
+      // Update in database
+      const { error } = await supabase
+        .from('sessions')
+        .update({
+          title: updatedSession.title,
+          instructor: updatedSession.instructor,
+          type: updatedSession.type,
+          time: updatedSession.time,
+          custom_start_time: updatedSession.customStartTime,
+          custom_end_time: updatedSession.customEndTime,
+          count: updatedSession.count,
+          total: updatedSession.total
+        })
+        .eq('id', updatedSession.id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setSessions(sessions.map(session => 
+        session.id === updatedSession.id ? updatedSession : session
+      ));
+      
+      toast({
+        title: "Session updated",
+        description: `The session "${updatedSession.title}" has been updated`,
+      });
+    } catch (error) {
+      console.error('Error updating session:', error);
+      toast({
+        variant: "destructive",
+        title: "Error updating session",
+        description: "Failed to update session",
+      });
+    }
   };
 
   const getRandomColor = () => {
@@ -673,11 +900,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
 
   const trackIds = visibleTracks.map(track => track.id);
   const today = new Date();
-  const currentMonthYearString = format(currentMonth, 'MMMM yyyy');
-
-  // Generate years for selector (current year +/- 10 years)
-  const currentYear = getYear(new Date());
-  const years = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
 
   return (
     <div className="overflow-x-auto">
@@ -688,110 +910,27 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
       >
         <div className="flex justify-between mb-3 items-center">
           <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handlePreviousMonth}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            
-            <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="min-w-[200px]">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {currentMonthYearString}
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Settings className="mr-2 h-4 w-4" /> Group Settings
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <div className="p-3">
-                  <div className="flex justify-between mb-3">
-                    <Select 
-                      value={String(getMonth(currentMonth))} 
-                      onValueChange={(value) => handleMonthChange(Number(value))}
-                    >
-                      <SelectTrigger className="w-[120px]">
-                        <SelectValue placeholder="Month" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 12 }, (_, i) => (
-                          <SelectItem key={i} value={String(i)}>
-                            {format(new Date(2000, i, 1), 'MMMM')}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    <Select 
-                      value={String(getYear(currentMonth))} 
-                      onValueChange={(value) => handleYearChange(Number(value))}
-                    >
-                      <SelectTrigger className="w-[100px]">
-                        <SelectValue placeholder="Year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {years.map(year => (
-                          <SelectItem key={year} value={String(year)}>
-                            {year}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <CalendarComponent
-                    mode="single"
-                    selected={currentMonth}
-                    onSelect={(date) => {
-                      if (date) {
-                        setCurrentMonth(date);
-                        setIsDatePickerOpen(false);
-                      }
-                    }}
-                    className="rounded-md border"
-                  />
-                </div>
-              </PopoverContent>
-            </Popover>
-            
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleNextMonth}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            
-            <Button
-              variant={showMultipleMonths ? "default" : "outline"}
-              size="sm"
-              onClick={() => setShowMultipleMonths(!showMultipleMonths)}
-              className="ml-2"
-            >
-              {showMultipleMonths ? "Single Month" : "Multiple Months"}
-            </Button>
+              </SheetTrigger>
+              <SheetContent>
+                <SheetHeader>
+                  <SheetTitle>Track Group Settings</SheetTitle>
+                  <SheetDescription>
+                    Manage your track groups, colors, and visibility
+                  </SheetDescription>
+                </SheetHeader>
+                <GroupSettings 
+                  groups={groups} 
+                  onUpdateGroups={handleUpdateGroups}
+                  onToggleGroupVisibility={handleToggleGroupVisibility}
+                />
+              </SheetContent>
+            </Sheet>
           </div>
-          
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Settings className="mr-2 h-4 w-4" /> Group Settings
-              </Button>
-            </SheetTrigger>
-            <SheetContent>
-              <SheetHeader>
-                <SheetTitle>Track Group Settings</SheetTitle>
-                <SheetDescription>
-                  Manage your track groups, colors, and visibility
-                </SheetDescription>
-              </SheetHeader>
-              <GroupSettings 
-                groups={groups} 
-                onUpdateGroups={handleUpdateGroups}
-                onToggleGroupVisibility={handleToggleGroupVisibility}
-              />
-            </SheetContent>
-          </Sheet>
         </div>
 
         <table className="min-w-full border-collapse">
@@ -809,185 +948,4 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
                       groupName={group?.name}
                       groupColor={group?.color}
                       grouped={!!track.groupId}
-                    />
-                  );
-                })}
-              </SortableContext>
-              <th className="w-[50px] bg-gray-50 p-3 border-b border-r border-gray-200">
-                <div className="flex flex-col gap-2">
-                  <button 
-                    onClick={handleAddTrack} 
-                    className="p-1 rounded-full hover:bg-gray-200 transition-colors mx-auto"
-                    title="Add new track"
-                  >
-                    <Plus size={20} />
-                  </button>
-                  
-                  <Sheet>
-                    <SheetTrigger asChild>
-                      <button 
-                        className="p-1 rounded-full hover:bg-gray-200 transition-colors mx-auto"
-                        title="Create track group"
-                      >
-                        <FolderPlus size={20} />
-                      </button>
-                    </SheetTrigger>
-                    <SheetContent>
-                      <SheetHeader>
-                        <SheetTitle>Create Track Group</SheetTitle>
-                        <SheetDescription>
-                          Create a new group to organize related tracks together.
-                        </SheetDescription>
-                      </SheetHeader>
-                      <div className="py-4">
-                        <div className="mb-4">
-                          <label className="text-sm font-medium" htmlFor="group-name">Group Name</label>
-                          <Input 
-                            id="group-name"
-                            value={newGroupName} 
-                            onChange={(e) => setNewGroupName(e.target.value)} 
-                            placeholder="Enter group name"
-                            className="mt-1"
-                          />
-                        </div>
-                        
-                        <div className="mb-4">
-                          <div className="flex justify-between items-center mb-2">
-                            <p className="text-sm font-medium">Select Tracks</p>
-                            <div className="flex items-center text-xs">
-                              <Checkbox 
-                                id="select-all"
-                                checked={selectedTracks.length === tracks.length}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setSelectedTracks(tracks.map(t => t.id));
-                                  } else {
-                                    setSelectedTracks([]);
-                                  }
-                                }}
-                              />
-                              <label htmlFor="select-all" className="ml-2">Select All</label>
-                            </div>
-                          </div>
-                          <div className="space-y-2 max-h-48 overflow-y-auto">
-                            {tracks.map(track => (
-                              <div key={track.id} className="flex items-center">
-                                <Checkbox 
-                                  id={`track-${track.id}`}
-                                  checked={selectedTracks.includes(track.id)}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      setSelectedTracks([...selectedTracks, track.id]);
-                                    } else {
-                                      setSelectedTracks(selectedTracks.filter(id => id !== track.id));
-                                    }
-                                  }}
-                                />
-                                <label htmlFor={`track-${track.id}`} className="ml-2">{track.name}</label>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        <Button onClick={handleCreateGroup}>Create Group</Button>
-                      </div>
-                    </SheetContent>
-                  </Sheet>
-                </div>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {days.map(day => {
-              const isToday = isSameDay(day.fullDate, today);
-              return (
-                <tr key={day.id} className={cn(
-                  day.isFriday ? "bg-gray-100" : "",
-                  isToday ? "bg-yellow-50" : ""
-                )}>
-                  <td className={cn(
-                    "w-[180px] bg-gray-50 p-3 font-medium text-left border-b border-r border-gray-200 sticky left-0",
-                    day.isFriday ? "bg-gray-200" : "",
-                    isToday ? "bg-yellow-100" : ""
-                  )}>
-                    <div className="font-semibold">{day.name}</div>
-                    <div className={cn("text-xs", isToday ? "font-bold text-blue-600" : "text-gray-500")}>
-                      {day.date} {isToday && "👈 Today"}
-                    </div>
-                  </td>
-                  {visibleTracks.map(track => {
-                    const cellSessions = getSessionsForCell(day.id, track.id);
-                    return (
-                      <td 
-                        key={`${day.id}-${track.id}`} 
-                        className={cn(
-                          "min-w-[250px] p-2 border-b border-r border-gray-200 align-top",
-                          day.isFriday ? "bg-gray-100" : "",
-                          isToday ? "bg-yellow-50" : ""
-                        )}
-                      >
-                        {cellSessions.map(session => {
-                          const hasSessionConflict = hasConflict(session);
-                          return (
-                            <div key={session.id} className="relative group">
-                              <div 
-                                className="absolute inset-0 bg-transparent group-hover:bg-black/5 rounded-md z-0 cursor-pointer"
-                                onClick={() => handleEditSession(session.id)}
-                              />
-                              <div className={cn(
-                                "mb-2",
-                                hasSessionConflict ? "ring-2 ring-pink-400 rounded-md" : ""
-                              )}>
-                                <SessionCard
-                                  title={session.title}
-                                  instructor={session.instructor}
-                                  type={session.type}
-                                  count={session.count}
-                                  total={session.total}
-                                  time={session.time}
-                                  customStartTime={session.customStartTime}
-                                  customEndTime={session.customEndTime}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
-                        
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button 
-                              className="w-full mt-2 p-1 border border-dashed border-gray-300 text-gray-500 rounded-md hover:bg-gray-50 transition-colors text-xs flex items-center justify-center"
-                            >
-                              <Plus size={12} className="mr-1" /> Add Session
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-80">
-                            <AddSessionForm 
-                              day={day} 
-                              track={track} 
-                              onAddSession={(sessionData) => handleAddSession(day.id, track.id, sessionData)} 
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </td>
-                    );
-                  })}
-                  <td className="w-[50px] border-b border-r border-gray-200"></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </DndContext>
-      
-      <EditSessionDialog
-        session={editingSession}
-        onSave={handleSaveEditedSession}
-        open={sessionDialogOpen}
-        onOpenChange={setSessionDialogOpen}
-      />
-    </div>
-  );
-};
-
-export default ScheduleGrid;
+                      onToggleVisibility={handleToggleTrackVisibility}
