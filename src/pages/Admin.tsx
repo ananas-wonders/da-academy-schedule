@@ -55,6 +55,9 @@ interface Permission {
   can_edit: boolean;
 }
 
+// Define valid role types to match the Supabase enum
+type UserRole = 'admin' | 'manager' | 'viewer';
+
 const Admin = () => {
   const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
@@ -145,7 +148,7 @@ const Admin = () => {
     }
   };
 
-  const updateUserRole = async (userId: string, newRole: string) => {
+  const updateUserRole = async (userId: string, newRole: UserRole) => {
     try {
       // First delete existing role
       const { error: deleteError } = await supabase
@@ -158,7 +161,7 @@ const Admin = () => {
       // Then insert new role
       const { error: insertError } = await supabase
         .from('user_roles')
-        .insert([{ user_id: userId, role: newRole }]);
+        .insert({ user_id: userId, role: newRole });
 
       if (insertError) throw insertError;
 
@@ -297,7 +300,7 @@ const Admin = () => {
                       <TableCell>
                         <Select
                           value={user.role}
-                          onValueChange={(value) => updateUserRole(user.id, value)}
+                          onValueChange={(value: UserRole) => updateUserRole(user.id, value)}
                         >
                           <SelectTrigger className="w-[180px]">
                             <SelectValue placeholder="Select role" />

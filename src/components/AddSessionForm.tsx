@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SessionCardProps, SessionType, SessionTime } from './SessionCard';
-import { Day, Track } from './ScheduleGrid';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,9 +12,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface AddSessionFormProps {
-  day: Day;
-  track: Track;
-  onAddSession: (session: Omit<SessionCardProps, 'id'>) => void;
+  onSubmit: (sessionData: Omit<SessionCardProps, 'id'>) => void;
 }
 
 interface Course {
@@ -52,7 +49,7 @@ const fetchInstructors = async (): Promise<Instructor[]> => {
   });
 };
 
-const AddSessionForm: React.FC<AddSessionFormProps> = ({ day, track, onAddSession }) => {
+const AddSessionForm: React.FC<AddSessionFormProps> = ({ onSubmit }) => {
   const [courseId, setCourseId] = useState('');
   const [instructorId, setInstructorId] = useState('');
   const [type, setType] = useState<SessionType>('online');
@@ -72,8 +69,8 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ day, track, onAddSessio
     queryFn: fetchInstructors,
   });
 
-  // Filter courses by current track
-  const filteredCourses = courses.filter(course => course.trackId === track.id);
+  // Filter courses
+  const filteredCourses = courses;
   
   const selectedCourse = courses.find(course => course.id === courseId);
   const selectedInstructor = instructors.find(instructor => instructor.id === instructorId);
@@ -86,7 +83,7 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ day, track, onAddSessio
       return; // Simple validation
     }
     
-    onAddSession({
+    onSubmit({
       title: selectedCourse?.title || '',
       instructor: selectedInstructor?.name || '',
       type,
@@ -108,11 +105,6 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ day, track, onAddSessio
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="text-sm mb-3">
-        <div className="font-semibold">Adding session for:</div>
-        <div>{day.name} ({day.date}) - {track.name}</div>
-      </div>
-      
       <div className="space-y-2">
         <Label htmlFor="course">Course</Label>
         <Popover open={courseOpen} onOpenChange={setCourseOpen}>
