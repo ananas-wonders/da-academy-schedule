@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import SessionCard, { SessionCardProps, SessionType, SessionTime } from './SessionCard';
 import { cn } from '@/lib/utils';
-import { Edit, GripHorizontal, Plus, FolderPlus, Settings, Eye, EyeOff, Palette } from 'lucide-react';
+import { Edit, GripHorizontal, Plus, FolderPlus, Settings, Eye, EyeOff, Palette, ChevronLeft, ChevronRight, Calendar, Search, MessageCircle } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isFriday, addMonths, subMonths, setMonth, setYear, getMonth, getYear } from 'date-fns';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 
 export interface Track {
   id: string;
@@ -34,6 +38,7 @@ export interface Day {
   id: string;
   name: string;
   date: string;
+  fullDate: Date;
   isFriday?: boolean;
 }
 
@@ -143,8 +148,12 @@ const EditSessionDialog = ({
   onOpenChange: (open: boolean) => void
 }) => {
   const [editedSession, setEditedSession] = useState<Session | null>(null);
+  const [courseSearchValue, setCourseSearchValue] = useState('');
+  const [instructorSearchValue, setInstructorSearchValue] = useState('');
+  const [isOpenCourses, setIsOpenCourses] = useState(false);
+  const [isOpenInstructors, setIsOpenInstructors] = useState(false);
   const [courseOptions, setCourseOptions] = useState<{ id: string, title: string }[]>([]);
-  const [instructorOptions, setInstructorOptions] = useState<{ id: string, name: string }[]>([]);
+  const [instructorOptions, setInstructorOptions] = useState<{ id: string, name: string, phone?: string }[]>([]);
 
   React.useEffect(() => {
     const loadData = () => {
@@ -152,7 +161,11 @@ const EditSessionDialog = ({
         const courses = JSON.parse(localStorage.getItem('courses') || '[]');
         const instructors = JSON.parse(localStorage.getItem('instructors') || '[]');
         setCourseOptions(courses.map((c: any) => ({ id: c.id, title: c.title })));
-        setInstructorOptions(instructors.map((i: any) => ({ id: i.id, name: i.name })));
+        setInstructorOptions(instructors.map((i: any) => ({ 
+          id: i.id, 
+          name: i.name,
+          phone: i.phone 
+        })));
       } catch (e) {
         console.error('Error loading data:', e);
       }
@@ -187,77 +200,150 @@ const EditSessionDialog = ({
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="edit-title">Course</Label>
-            <Select 
-              value={editedSession.title} 
-              onValueChange={(value) => handleChange('title', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select course" />
-              </SelectTrigger>
-              <SelectContent>
-                {courseOptions.map(course => (
-                  <SelectItem key={course.id} value={course.title}>{course.title}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={isOpenCourses} onOpenChange={setIsOpenCourses}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={isOpenCourses}
+                  className="w-full justify-between"
+                >
+                  {editedSession.title || "Select course..."}
+                  <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0">
+                <Command>
+                  <CommandInput 
+                    placeholder="Search courses..." 
+                    value={courseSearchValue}
+                    onValueChange={setCourseSearchValue}
+                  />
+                  <CommandList>
+                    <CommandEmpty>No courses found.</CommandEmpty>
+                    <CommandGroup>
+                      {courseOptions
+                        .filter(course => 
+                          course.title.toLowerCase().includes(courseSearchValue.toLowerCase())
+                        )
+                        .map(course => (
+                          <CommandItem
+                            key={course.id}
+                            value={course.title}
+                            onSelect={() => {
+                              handleChange('title', course.title);
+                              setIsOpenCourses(false);
+                            }}
+                          >
+                            {course.title}
+                          </CommandItem>
+                        ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-instructor">Instructor</Label>
-            <Select 
-              value={editedSession.instructor} 
-              onValueChange={(value) => handleChange('instructor', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select instructor" />
-              </SelectTrigger>
-              <SelectContent>
-                {instructorOptions.map(instructor => (
-                  <SelectItem key={instructor.id} value={instructor.name}>{instructor.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={isOpenInstructors} onOpenChange={setIsOpenInstructors}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={isOpenInstructors}
+                  className="w-full justify-between"
+                >
+                  {editedSession.instructor || "Select instructor..."}
+                  <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0">
+                <Command>
+                  <CommandInput 
+                    placeholder="Search instructors..." 
+                    value={instructorSearchValue}
+                    onValueChange={setInstructorSearchValue}
+                  />
+                  <CommandList>
+                    <CommandEmpty>No instructors found.</CommandEmpty>
+                    <CommandGroup>
+                      {instructorOptions
+                        .filter(instructor => 
+                          instructor.name.toLowerCase().includes(instructorSearchValue.toLowerCase())
+                        )
+                        .map(instructor => (
+                          <CommandItem
+                            key={instructor.id}
+                            value={instructor.name}
+                            onSelect={() => {
+                              handleChange('instructor', instructor.name);
+                              setIsOpenInstructors(false);
+                            }}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span>{instructor.name}</span>
+                              {instructor.phone && (
+                                <a
+                                  href={`https://api.whatsapp.com/send?phone=${instructor.phone}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-green-500 hover:text-green-700"
+                                >
+                                  <MessageCircle size={16} />
+                                </a>
+                              )}
+                            </div>
+                          </CommandItem>
+                        ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="space-y-2">
             <Label>Session Type</Label>
-            <RadioGroup 
+            <ToggleGroup 
+              type="single" 
               value={editedSession.type} 
-              onValueChange={(value) => handleChange('type', value as SessionType)}
-              className="flex gap-4"
+              onValueChange={(value: string) => {
+                if (value) handleChange('type', value as SessionType);
+              }}
+              className="justify-start"
             >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="online" id="edit-online" />
-                <Label htmlFor="edit-online">🌐 Online</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="offline" id="edit-offline" />
-                <Label htmlFor="edit-offline">🏫 Offline</Label>
-              </div>
-            </RadioGroup>
+              <ToggleGroupItem value="online" className="px-4 data-[state=on]:bg-blue-100">
+                🌐 Online
+              </ToggleGroupItem>
+              <ToggleGroupItem value="offline" className="px-4 data-[state=on]:bg-green-100">
+                🏫 Offline
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
           <div className="space-y-2">
             <Label>Session Time</Label>
-            <RadioGroup 
+            <ToggleGroup 
+              type="single" 
               value={editedSession.time || '9am-12pm'} 
-              onValueChange={(value) => handleChange('time', value as SessionTime)}
-              className="grid grid-cols-2 gap-2"
+              onValueChange={(value: string) => {
+                if (value) handleChange('time', value as SessionTime);
+              }}
+              className="justify-start flex-wrap gap-2"
             >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="9am-12pm" id="edit-morning" />
-                <Label htmlFor="edit-morning">9am - 12pm</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="1pm-3:45pm" id="edit-afternoon" />
-                <Label htmlFor="edit-afternoon">1pm - 3:45pm</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="4pm-6:45pm" id="edit-evening" />
-                <Label htmlFor="edit-evening">4pm - 6:45pm</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="custom" id="edit-custom" />
-                <Label htmlFor="edit-custom">Custom</Label>
-              </div>
-            </RadioGroup>
+              <ToggleGroupItem value="9am-12pm" className="data-[state=on]:bg-indigo-100">
+                9am - 12pm
+              </ToggleGroupItem>
+              <ToggleGroupItem value="1pm-3:45pm" className="data-[state=on]:bg-indigo-100">
+                1pm - 3:45pm
+              </ToggleGroupItem>
+              <ToggleGroupItem value="4pm-6:45pm" className="data-[state=on]:bg-indigo-100">
+                4pm - 6:45pm
+              </ToggleGroupItem>
+              <ToggleGroupItem value="custom" className="data-[state=on]:bg-indigo-100">
+                Custom
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
           
           {editedSession.time === 'custom' && (
@@ -284,29 +370,6 @@ const EditSessionDialog = ({
               </div>
             </div>
           )}
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-count">Current Count</Label>
-              <Input
-                id="edit-count"
-                type="number"
-                min={0}
-                value={editedSession.count}
-                onChange={(e) => handleChange('count', Number(e.target.value))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-total">Total Capacity</Label>
-              <Input
-                id="edit-total"
-                type="number"
-                min={1}
-                value={editedSession.total}
-                onChange={(e) => handleChange('total', Number(e.target.value))}
-              />
-            </div>
-          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -383,7 +446,7 @@ const GroupSettings = ({
 };
 
 const ScheduleGrid: React.FC<ScheduleGridProps> = ({ 
-  days, 
+  days: initialDays, 
   tracks: initialTracks, 
   sessions: initialSessions,
   viewDensity
@@ -395,12 +458,62 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
   const [selectedTracks, setSelectedTracks] = useState<string[]>([]);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [sessionDialogOpen, setSessionDialogOpen] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [days, setDays] = useState<Day[]>(initialDays);
+  const [showMultipleMonths, setShowMultipleMonths] = useState(false);
   const { toast } = useToast();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor)
   );
+
+  React.useEffect(() => {
+    // Generate days based on the current month and view density
+    const today = new Date();
+    generateDays(currentMonth);
+  }, [currentMonth, viewDensity, showMultipleMonths]);
+
+  const generateDays = (baseDate: Date) => {
+    const start = startOfMonth(baseDate);
+    let end;
+    
+    if (showMultipleMonths) {
+      // Show 2 months if showMultipleMonths is enabled
+      end = endOfMonth(addMonths(start, 1));
+    } else {
+      end = endOfMonth(start);
+    }
+
+    const daysArray = eachDayOfInterval({ start, end });
+    
+    const formattedDays: Day[] = daysArray.map(day => ({
+      id: format(day, 'yyyy-MM-dd'),
+      name: format(day, 'EEEE'),
+      date: format(day, 'MMM d, yyyy'),
+      fullDate: day,
+      isFriday: isFriday(day)
+    }));
+
+    setDays(formattedDays);
+  };
+
+  const handlePreviousMonth = () => {
+    setCurrentMonth(prev => subMonths(prev, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(prev => addMonths(prev, 1));
+  };
+
+  const handleMonthChange = (month: number) => {
+    setCurrentMonth(prev => setMonth(prev, month));
+  };
+
+  const handleYearChange = (year: number) => {
+    setCurrentMonth(prev => setYear(prev, year));
+  };
 
   const visibleTracks = tracks.filter(track => {
     if (!track.groupId) return true;
@@ -412,6 +525,17 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     return sessions.filter(
       session => session.dayId === dayId && session.trackId === trackId
     ).slice(0, 5);
+  };
+
+  // Check if a session conflicts with another session (same instructor, same day, different track)
+  const hasConflict = (session: Session) => {
+    return sessions.some(s => 
+      s.id !== session.id && 
+      s.dayId === session.dayId && 
+      s.trackId !== session.trackId && 
+      s.instructor === session.instructor &&
+      s.time === session.time
+    );
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -548,6 +672,12 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
   };
 
   const trackIds = visibleTracks.map(track => track.id);
+  const today = new Date();
+  const currentMonthYearString = format(currentMonth, 'MMMM yyyy');
+
+  // Generate years for selector (current year +/- 10 years)
+  const currentYear = getYear(new Date());
+  const years = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
 
   return (
     <div className="overflow-x-auto">
@@ -556,7 +686,92 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex justify-end mb-2">
+        <div className="flex justify-between mb-3 items-center">
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handlePreviousMonth}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            
+            <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="min-w-[200px]">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {currentMonthYearString}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <div className="p-3">
+                  <div className="flex justify-between mb-3">
+                    <Select 
+                      value={String(getMonth(currentMonth))} 
+                      onValueChange={(value) => handleMonthChange(Number(value))}
+                    >
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue placeholder="Month" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 12 }, (_, i) => (
+                          <SelectItem key={i} value={String(i)}>
+                            {format(new Date(2000, i, 1), 'MMMM')}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    <Select 
+                      value={String(getYear(currentMonth))} 
+                      onValueChange={(value) => handleYearChange(Number(value))}
+                    >
+                      <SelectTrigger className="w-[100px]">
+                        <SelectValue placeholder="Year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {years.map(year => (
+                          <SelectItem key={year} value={String(year)}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <CalendarComponent
+                    mode="single"
+                    selected={currentMonth}
+                    onSelect={(date) => {
+                      if (date) {
+                        setCurrentMonth(date);
+                        setIsDatePickerOpen(false);
+                      }
+                    }}
+                    className="rounded-md border"
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleNextMonth}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            
+            <Button
+              variant={showMultipleMonths ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowMultipleMonths(!showMultipleMonths)}
+              className="ml-2"
+            >
+              {showMultipleMonths ? "Single Month" : "Multiple Months"}
+            </Button>
+          </div>
+          
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="outline" size="sm">
@@ -683,66 +898,84 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
             </tr>
           </thead>
           <tbody>
-            {days.map(day => (
-              <tr key={day.id} className={cn(day.isFriday ? "bg-gray-100" : "")}>
-                <td className={cn(
-                  "w-[180px] bg-gray-50 p-3 font-medium text-left border-b border-r border-gray-200 sticky left-0",
-                  day.isFriday ? "bg-gray-200" : ""
+            {days.map(day => {
+              const isToday = isSameDay(day.fullDate, today);
+              return (
+                <tr key={day.id} className={cn(
+                  day.isFriday ? "bg-gray-100" : "",
+                  isToday ? "bg-yellow-50" : ""
                 )}>
-                  <div className="font-semibold">{day.name}</div>
-                  <div className="text-xs text-gray-500">{day.date}</div>
-                </td>
-                {visibleTracks.map(track => {
-                  const cellSessions = getSessionsForCell(day.id, track.id);
-                  return (
-                    <td 
-                      key={`${day.id}-${track.id}`} 
-                      className={cn(
-                        "min-w-[250px] p-2 border-b border-r border-gray-200 align-top",
-                        day.isFriday ? "bg-gray-100" : ""
-                      )}
-                    >
-                      {cellSessions.map(session => (
-                        <div key={session.id} className="relative group">
-                          <div 
-                            className="absolute inset-0 bg-transparent group-hover:bg-black/5 rounded-md z-0 cursor-pointer"
-                            onClick={() => handleEditSession(session.id)}
-                          />
-                          <SessionCard
-                            title={session.title}
-                            instructor={session.instructor}
-                            type={session.type}
-                            count={session.count}
-                            total={session.total}
-                            time={session.time}
-                            customStartTime={session.customStartTime}
-                            customEndTime={session.customEndTime}
-                          />
-                        </div>
-                      ))}
-                      
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button 
-                            className="w-full mt-2 p-1 border border-dashed border-gray-300 text-gray-500 rounded-md hover:bg-gray-50 transition-colors text-xs flex items-center justify-center"
-                          >
-                            <Plus size={12} className="mr-1" /> Add Session
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80">
-                          <AddSessionForm 
-                            day={day} 
-                            track={track} 
-                            onAddSession={(sessionData) => handleAddSession(day.id, track.id, sessionData)} 
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </td>
-                  );
-                })}
-                <td className="w-[50px] border-b border-r border-gray-200"></td>
-              </tr>
-            ))}
+                  <td className={cn(
+                    "w-[180px] bg-gray-50 p-3 font-medium text-left border-b border-r border-gray-200 sticky left-0",
+                    day.isFriday ? "bg-gray-200" : "",
+                    isToday ? "bg-yellow-100" : ""
+                  )}>
+                    <div className="font-semibold">{day.name}</div>
+                    <div className={cn("text-xs", isToday ? "font-bold text-blue-600" : "text-gray-500")}>
+                      {day.date} {isToday && "👈 Today"}
+                    </div>
+                  </td>
+                  {visibleTracks.map(track => {
+                    const cellSessions = getSessionsForCell(day.id, track.id);
+                    return (
+                      <td 
+                        key={`${day.id}-${track.id}`} 
+                        className={cn(
+                          "min-w-[250px] p-2 border-b border-r border-gray-200 align-top",
+                          day.isFriday ? "bg-gray-100" : "",
+                          isToday ? "bg-yellow-50" : ""
+                        )}
+                      >
+                        {cellSessions.map(session => {
+                          const hasSessionConflict = hasConflict(session);
+                          return (
+                            <div key={session.id} className="relative group">
+                              <div 
+                                className="absolute inset-0 bg-transparent group-hover:bg-black/5 rounded-md z-0 cursor-pointer"
+                                onClick={() => handleEditSession(session.id)}
+                              />
+                              <div className={cn(
+                                "mb-2",
+                                hasSessionConflict ? "ring-2 ring-pink-400 rounded-md" : ""
+                              )}>
+                                <SessionCard
+                                  title={session.title}
+                                  instructor={session.instructor}
+                                  type={session.type}
+                                  count={session.count}
+                                  total={session.total}
+                                  time={session.time}
+                                  customStartTime={session.customStartTime}
+                                  customEndTime={session.customEndTime}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                        
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button 
+                              className="w-full mt-2 p-1 border border-dashed border-gray-300 text-gray-500 rounded-md hover:bg-gray-50 transition-colors text-xs flex items-center justify-center"
+                            >
+                              <Plus size={12} className="mr-1" /> Add Session
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80">
+                            <AddSessionForm 
+                              day={day} 
+                              track={track} 
+                              onAddSession={(sessionData) => handleAddSession(day.id, track.id, sessionData)} 
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </td>
+                    );
+                  })}
+                  <td className="w-[50px] border-b border-r border-gray-200"></td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </DndContext>

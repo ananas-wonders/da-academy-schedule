@@ -1,9 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ScheduleGrid, { ViewDensity, Track } from '@/components/ScheduleGrid';
-import { allDays, sessions, Session } from '@/data/scheduleData';
+import { sessions, Session } from '@/data/scheduleData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Toaster } from "@/components/ui/toaster";
+import { format, eachDayOfInterval, startOfMonth, endOfMonth, isFriday, addDays } from 'date-fns';
 
 const Index = () => {
   const [viewDensity, setViewDensity] = useState<ViewDensity>('2weeks');
@@ -13,20 +14,58 @@ const Index = () => {
     { id: 'track-3', name: 'Advanced Course' },
     { id: 'track-4', name: 'Expert Racing' }
   ]);
+  const [days, setDays] = useState<any[]>([]);
+  
+  useEffect(() => {
+    // Generate days based on the current month
+    const today = new Date();
+    const start = startOfMonth(today);
+    const end = endOfMonth(today);
+    
+    const daysArray = eachDayOfInterval({ start, end });
+    
+    const generatedDays = daysArray.map(day => ({
+      id: format(day, 'yyyy-MM-dd'),
+      name: format(day, 'EEEE'),
+      date: format(day, 'MMM d, yyyy'),
+      fullDate: day,
+      isFriday: isFriday(day)
+    }));
+    
+    setDays(generatedDays);
+  }, []);
   
   // Filter days based on selected view density
   const getVisibleDays = () => {
+    if (!days.length) return [];
+    
     switch (viewDensity) {
       case '1week':
-        return allDays.slice(0, 7);
+        return days.slice(0, 7);
       case '2weeks':
-        return allDays.slice(0, 14);
+        return days.slice(0, 14);
       case 'month':
-        return allDays.slice(0, 21); // ~3 weeks (approximate month view)
+        return days; // Full month
       case '2months':
-        return allDays.slice(0, 28); // 4 weeks (approximate 2 month view)
+        // For 2 months view, we'll extend days to include some days from next month
+        if (days.length) {
+          const lastDate = days[days.length - 1].fullDate;
+          const additionalDays = eachDayOfInterval({ 
+            start: addDays(lastDate, 1), 
+            end: addDays(lastDate, 31) // Approximately one more month
+          }).map(day => ({
+            id: format(day, 'yyyy-MM-dd'),
+            name: format(day, 'EEEE'),
+            date: format(day, 'MMM d, yyyy'),
+            fullDate: day,
+            isFriday: isFriday(day)
+          }));
+          
+          return [...days, ...additionalDays];
+        }
+        return days;
       default:
-        return allDays.slice(0, 14); // Default to 2 weeks
+        return days.slice(0, 14); // Default to 2 weeks
     }
   };
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Edit, Trash, Plus, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Progress } from '@/components/ui/progress';
 
 type Course = {
   id: string;
@@ -103,6 +105,31 @@ const CourseLists = () => {
     notes: '',
     trackId: 'track-1'
   });
+  const [sessionCounts, setSessionCounts] = useState<{[courseTitle: string]: number}>({});
+
+  // Load session counts from the sessions data
+  useEffect(() => {
+    const loadSessionData = () => {
+      try {
+        const sessionsData = JSON.parse(localStorage.getItem('sessions') || '[]');
+        
+        // Count sessions per course title
+        const counts: {[courseTitle: string]: number} = {};
+        
+        sessionsData.forEach((session: any) => {
+          if (session.title) {
+            counts[session.title] = (counts[session.title] || 0) + 1;
+          }
+        });
+        
+        setSessionCounts(counts);
+      } catch (e) {
+        console.error('Error loading session data:', e);
+      }
+    };
+    
+    loadSessionData();
+  }, []);
 
   // Save to localStorage whenever courses change
   useEffect(() => {
@@ -112,6 +139,19 @@ const CourseLists = () => {
   const filteredCourses = activeTrack === 'all' 
     ? courses 
     : courses.filter(course => course.trackId === activeTrack);
+
+  const getSessionProgress = (course: Course) => {
+    const scheduledSessions = sessionCounts[course.title] || 0;
+    const progressPercentage = course.numberOfSessions > 0 
+      ? Math.min(100, Math.round((scheduledSessions / course.numberOfSessions) * 100)) 
+      : 0;
+    
+    return {
+      scheduled: scheduledSessions,
+      total: course.numberOfSessions,
+      percentage: progressPercentage
+    };
+  };
 
   const handleAddCourse = () => {
     // Calculate total hours and number of sessions
@@ -426,55 +466,66 @@ const CourseLists = () => {
         <TabsContent value={activeTrack} className="mt-0">
           {viewMode === 'cards' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredCourses.map(course => (
-                <Card key={course.id}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle>{course.title}</CardTitle>
-                        <CardDescription>
-                          {course.courseCode} - {course.term}
-                        </CardDescription>
+              {filteredCourses.map(course => {
+                const progress = getSessionProgress(course);
+                return (
+                  <Card key={course.id}>
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle>{course.title}</CardTitle>
+                          <CardDescription>
+                            {course.courseCode} - {course.term}
+                          </CardDescription>
+                        </div>
+                        <div className={`text-sm font-medium ${getStatusColor(course.status)}`}>
+                          {course.status.replace('-', ' ')}
+                        </div>
                       </div>
-                      <div className={`text-sm font-medium ${getStatusColor(course.status)}`}>
-                        {course.status.replace('-', ' ')}
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-600 mb-4">{course.category}</p>
+                      
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Track:</span>
+                          <span className="font-medium">{trackOptions.find(t => t.id === course.trackId)?.name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Hours:</span>
+                          <span className="font-medium">L: {course.lectureHours}, Lab: {course.labHours}, Self: {course.selfStudyHours}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Total Hours:</span>
+                          <span className="font-medium">{course.totalHours}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Sessions:</span>
+                          <span className="font-medium">{course.numberOfSessions}</span>
+                        </div>
+                        
+                        <div className="mt-3">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span>Progress:</span>
+                            <span>{progress.scheduled} of {progress.total} sessions scheduled ({progress.percentage}%)</span>
+                          </div>
+                          <Progress value={progress.percentage} className="h-2" />
+                        </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600 mb-4">{course.category}</p>
-                    
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Track:</span>
-                        <span className="font-medium">{trackOptions.find(t => t.id === course.trackId)?.name}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Hours:</span>
-                        <span className="font-medium">L: {course.lectureHours}, Lab: {course.labHours}, Self: {course.selfStudyHours}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Total Hours:</span>
-                        <span className="font-medium">{course.totalHours}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Sessions:</span>
-                        <span className="font-medium">{course.numberOfSessions}</span>
-                      </div>
-                    </div>
-                    
-                    {course.notes && <p className="text-sm italic mt-4">{course.notes}</p>}
-                  </CardContent>
-                  <CardFooter className="flex justify-end space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => startEdit(course)}>
-                      <Edit className="h-4 w-4 mr-1" /> Edit
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDeleteCourse(course.id)}>
-                      <Trash className="h-4 w-4 mr-1" /> Delete
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
+                      
+                      {course.notes && <p className="text-sm italic mt-4">{course.notes}</p>}
+                    </CardContent>
+                    <CardFooter className="flex justify-end space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => startEdit(course)}>
+                        <Edit className="h-4 w-4 mr-1" /> Edit
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={() => handleDeleteCourse(course.id)}>
+                        <Trash className="h-4 w-4 mr-1" /> Delete
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <div className="rounded-md border overflow-hidden">
@@ -490,33 +541,43 @@ const CourseLists = () => {
                     <TableHead>Total Hours</TableHead>
                     <TableHead>Sessions</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Progress</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCourses.map(course => (
-                    <TableRow key={course.id}>
-                      <TableCell className="font-medium">{course.courseCode}</TableCell>
-                      <TableCell>{course.title}</TableCell>
-                      <TableCell>{trackOptions.find(t => t.id === course.trackId)?.name}</TableCell>
-                      <TableCell>{course.category}</TableCell>
-                      <TableCell>{course.term}</TableCell>
-                      <TableCell>{course.lectureHours}/{course.labHours}/{course.selfStudyHours}</TableCell>
-                      <TableCell>{course.totalHours}</TableCell>
-                      <TableCell>{course.numberOfSessions}</TableCell>
-                      <TableCell className={getStatusColor(course.status)}>
-                        {course.status.replace('-', ' ')}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => startEdit(course)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteCourse(course.id)}>
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredCourses.map(course => {
+                    const progress = getSessionProgress(course);
+                    return (
+                      <TableRow key={course.id}>
+                        <TableCell className="font-medium">{course.courseCode}</TableCell>
+                        <TableCell>{course.title}</TableCell>
+                        <TableCell>{trackOptions.find(t => t.id === course.trackId)?.name}</TableCell>
+                        <TableCell>{course.category}</TableCell>
+                        <TableCell>{course.term}</TableCell>
+                        <TableCell>{course.lectureHours}/{course.labHours}/{course.selfStudyHours}</TableCell>
+                        <TableCell>{course.totalHours}</TableCell>
+                        <TableCell>{course.numberOfSessions}</TableCell>
+                        <TableCell className={getStatusColor(course.status)}>
+                          {course.status.replace('-', ' ')}
+                        </TableCell>
+                        <TableCell className="w-40">
+                          <div className="flex flex-col">
+                            <span className="text-xs mb-1">{progress.scheduled}/{progress.total} ({progress.percentage}%)</span>
+                            <Progress value={progress.percentage} className="h-2" />
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => startEdit(course)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteCourse(course.id)}>
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
