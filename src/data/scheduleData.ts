@@ -1,3 +1,4 @@
+
 import { SessionType, SessionTime, type SessionCardProps } from '@/components/SessionCard';
 
 export const allDays = [
@@ -331,4 +332,46 @@ export interface Session {
   time?: SessionTime;
   customStartTime?: string;
   customEndTime?: string;
+  highlighted?: boolean;
 }
+
+// Helper function to check for instructor conflicts (same instructor, same day, same time in different tracks)
+export const checkInstructorConflicts = (sessions: Session[]): Session[] => {
+  const sessionsByDay = {};
+  
+  // Group sessions by day and time
+  sessions.forEach(session => {
+    const key = `${session.dayId}-${session.time}`;
+    if (!sessionsByDay[key]) {
+      sessionsByDay[key] = [];
+    }
+    sessionsByDay[key].push(session);
+  });
+  
+  // Check for conflicts and mark sessions
+  const conflictedSessions = new Set<string>();
+  
+  Object.values(sessionsByDay).forEach((daySessions: Session[]) => {
+    // Check if any instructor appears more than once in this day+time group
+    const instructorCounts = {};
+    daySessions.forEach(session => {
+      if (!instructorCounts[session.instructor]) {
+        instructorCounts[session.instructor] = [];
+      }
+      instructorCounts[session.instructor].push(session.id);
+    });
+    
+    // If instructor has more than one session at this time, mark all as conflicts
+    Object.values(instructorCounts).forEach((sessionIds: string[]) => {
+      if (sessionIds.length > 1) {
+        sessionIds.forEach(id => conflictedSessions.add(id));
+      }
+    });
+  });
+  
+  // Mark conflicted sessions
+  return sessions.map(session => ({
+    ...session,
+    highlighted: conflictedSessions.has(session.id)
+  }));
+};

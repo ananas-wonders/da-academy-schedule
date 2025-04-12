@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Edit, Trash, Plus, Search } from 'lucide-react';
+import { Edit, Trash, Plus, Search, WhatsApp } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -178,6 +178,22 @@ const InstructorDetails = () => {
     }
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isEdit: boolean) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const imageUrl = reader.result as string;
+      if (isEdit && editInstructor) {
+        handleEditInstructorChange('imageUrl', imageUrl);
+      } else {
+        handleNewInstructorChange('imageUrl', imageUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
@@ -218,6 +234,35 @@ const InstructorDetails = () => {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
+                <div className="flex justify-center mb-4">
+                  <div className="relative">
+                    <Avatar className="h-24 w-24">
+                      <AvatarImage 
+                        src={editInstructor?.imageUrl || newInstructor.imageUrl || ''} 
+                        alt="Instructor photo" 
+                      />
+                      <AvatarFallback>
+                        {editInstructor 
+                          ? editInstructor.name.substring(0, 2).toUpperCase() 
+                          : (newInstructor.name ? newInstructor.name.substring(0, 2).toUpperCase() : 'IN')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <label 
+                      htmlFor="photo-upload" 
+                      className="absolute bottom-0 right-0 bg-primary text-white p-1 rounded-full cursor-pointer"
+                    >
+                      <Edit className="h-3.5 w-3.5" />
+                    </label>
+                    <input 
+                      id="photo-upload" 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={(e) => handleImageUpload(e, !!editInstructor)}
+                    />
+                  </div>
+                </div>
+                
                 <div className="space-y-2">
                   <label htmlFor="name" className="text-sm font-medium">Name</label>
                   <Input 
@@ -272,18 +317,6 @@ const InstructorDetails = () => {
                       ? handleEditInstructorChange('company', e.target.value) 
                       : handleNewInstructorChange('company', e.target.value)
                     } 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="imageUrl" className="text-sm font-medium">Profile Image URL</label>
-                  <Input 
-                    id="imageUrl" 
-                    value={editInstructor ? editInstructor.imageUrl || '' : newInstructor.imageUrl || ''} 
-                    onChange={(e) => editInstructor 
-                      ? handleEditInstructorChange('imageUrl', e.target.value) 
-                      : handleNewInstructorChange('imageUrl', e.target.value)
-                    } 
-                    placeholder="https://example.com/image.jpg"
                   />
                 </div>
                 <div className="space-y-2">
@@ -359,9 +392,21 @@ const InstructorDetails = () => {
                   <AvatarImage src={instructor.imageUrl} alt={instructor.name} />
                   <AvatarFallback>{instructor.name.substring(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <div>
-                  <CardTitle className="text-xl">{instructor.name}</CardTitle>
-                  <p className="text-sm text-gray-500">{instructor.email}</p>
+                <div className="flex justify-between items-center w-full">
+                  <div>
+                    <CardTitle className="text-xl">{instructor.name}</CardTitle>
+                    <p className="text-sm text-gray-500">{instructor.email}</p>
+                  </div>
+                  {instructor.phone && (
+                    <a 
+                      href={`https://api.whatsapp.com/send?phone=${instructor.phone.replace(/\D/g, '')}`}
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-green-500 hover:text-green-700"
+                    >
+                      <WhatsApp className="h-5 w-5" />
+                    </a>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -437,7 +482,21 @@ const InstructorDetails = () => {
                     </div>
                   </TableCell>
                   <TableCell>{instructor.email}</TableCell>
-                  <TableCell>{instructor.phone}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center">
+                      {instructor.phone}
+                      {instructor.phone && (
+                        <a 
+                          href={`https://api.whatsapp.com/send?phone=${instructor.phone.replace(/\D/g, '')}`}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="ml-2 text-green-500 hover:text-green-700"
+                        >
+                          <WhatsApp className="h-4 w-4" />
+                        </a>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>{instructor.subject}</TableCell>
                   <TableCell>{instructor.company}</TableCell>
                   <TableCell>
