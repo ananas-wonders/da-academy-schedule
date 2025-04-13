@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import ScheduleGrid, { ViewDensity } from '@/components/ScheduleGrid';
+import ScheduleGrid from '@/components/ScheduleGrid';
+import { ViewDensity } from '@/types/schedule';
 import { Toaster } from "@/components/ui/toaster";
 import ScheduleHeader from '@/components/schedule/ScheduleHeader';
 import { useScheduleData } from '@/hooks/useScheduleData';

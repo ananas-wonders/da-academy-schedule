@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Track, ViewDensity } from '@/components/ScheduleGrid';
+import { Track, ViewDensity } from '@/types/schedule';
 import { Card, CardContent } from "@/components/ui/card";
 import DateNavigation from './DateNavigation';
 import ViewSelector from './ViewSelector';

@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ViewDensity } from '@/components/ScheduleGrid';
+import { ViewDensity } from '@/types/schedule';
 
 interface ViewSelectorProps {
   viewDensity: ViewDensity;

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { ViewDensity } from '@/components/ScheduleGrid';
+import { ViewDensity } from '@/types/schedule';
 import { 
   format, 
   addMonths, 

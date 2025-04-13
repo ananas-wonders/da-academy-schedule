@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Track } from '@/components/ScheduleGrid';
+import { Track } from '@/types/schedule';
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";

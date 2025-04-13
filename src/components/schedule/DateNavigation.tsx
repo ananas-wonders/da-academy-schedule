@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format, addWeeks, addMonths, subMonths, getMonth, getYear, setMonth, setYear } from 'date-fns';
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ViewDensity } from '@/components/ScheduleGrid';
+import { ViewDensity } from '@/types/schedule';
 
 interface DateNavigationProps {
   currentMonth: Date;
