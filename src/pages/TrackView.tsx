@@ -43,6 +43,26 @@ const TrackView = () => {
   useEffect(() => {
     if (trackId) {
       fetchTrackData();
+      
+      // Set up real-time subscription
+      const sessionsChannel = supabase
+        .channel('public:sessions')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'sessions', filter: `track_id=eq.${trackId}` }, 
+          () => {
+            console.log('Sessions changed, refreshing data');
+            fetchTrackData();
+            toast({
+              title: "Sessions Updated",
+              description: "Session data has been updated",
+            });
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(sessionsChannel);
+      };
     }
   }, [trackId]);
 

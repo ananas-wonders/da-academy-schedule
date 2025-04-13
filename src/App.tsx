@@ -1,8 +1,10 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
+import { useEffect } from "react";
 import Index from "./pages/Index";
 import CourseLists from "./pages/CourseLists";
 import InstructorDetails from "./pages/InstructorDetails";
@@ -13,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import { Button } from "./components/ui/button";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { UserCircle2, LogOut } from "lucide-react";
+import { enableRealtimeForTables } from "./integrations/supabase/enableRealtime";
 
 const queryClient = new QueryClient();
 
@@ -98,19 +101,26 @@ const AppRoutes = () => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Navigation />
-          <AppRoutes />
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  useEffect(() => {
+    // Enable real-time updates for tables when the app initializes
+    enableRealtimeForTables();
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Navigation />
+            <AppRoutes />
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
