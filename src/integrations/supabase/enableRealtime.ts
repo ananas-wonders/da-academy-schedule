@@ -6,8 +6,9 @@ export const enableRealtimeForTables = async () => {
   try {
     // Check if tables exist and are accessible
     // This approach is more reliable than trying to use non-existent API methods
-    const tables = ['sessions', 'tracks', 'track_groups', 'courses', 'instructors'];
-    const checksPromises = tables.map(table => 
+    const tablesToCheck = ['sessions', 'tracks', 'track_groups', 'courses', 'instructors'] as const;
+    
+    const checksPromises = tablesToCheck.map(table => 
       supabase.from(table).select('id').limit(1)
     );
     
@@ -16,9 +17,9 @@ export const enableRealtimeForTables = async () => {
     // Log any errors for debugging
     results.forEach((result, index) => {
       if (result.error) {
-        console.error(`Error checking table ${tables[index]}:`, result.error);
+        console.error(`Error checking table ${tablesToCheck[index]}:`, result.error);
       } else {
-        console.log(`Successfully verified table ${tables[index]} exists`);
+        console.log(`Successfully verified table ${tablesToCheck[index]} exists`);
       }
     });
     
@@ -35,7 +36,7 @@ export const enableRealtimeForTables = async () => {
     console.log('Real-time updates verified for tables');
     return true;
   } catch (error) {
-    console.error('Error checking real-time updates status:', error);
+    console.error('Error setting up real-time updates:', error);
     return false;
   }
 };
