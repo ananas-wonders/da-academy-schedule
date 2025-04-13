@@ -4,35 +4,33 @@ import { supabase } from './client';
 // Function to enable real-time updates for the specified tables
 export const enableRealtimeForTables = async () => {
   try {
-    // Enable real-time for all relevant tables by adding them to the publication
-    // This is now done via SQL when setting up the database
+    // Check if tables exist and are accessible
+    // This approach is more reliable than trying to use non-existent API methods
+    const tables = ['sessions', 'tracks', 'track_groups', 'courses', 'instructors'];
+    const checksPromises = tables.map(table => 
+      supabase.from(table).select('id').limit(1)
+    );
     
-    // Instead of using the incorrect API, we'll check if the tables exist
-    // and confirm they're part of the realtime publication
-    const { data: sessionCheck, error: sessionError } = await supabase
-      .from('sessions')
-      .select('id')
-      .limit(1);
-      
-    const { data: trackCheck, error: trackError } = await supabase
-      .from('tracks')
-      .select('id')
-      .limit(1);
-      
-    const { data: trackGroupCheck, error: trackGroupError } = await supabase
-      .from('track_groups')
-      .select('id')
-      .limit(1);
-      
-    const { data: coursesCheck, error: coursesError } = await supabase
-      .from('courses')
-      .select('id')
-      .limit(1);
-      
-    const { data: instructorsCheck, error: instructorsError } = await supabase
-      .from('instructors')
-      .select('id')
-      .limit(1);
+    const results = await Promise.all(checksPromises);
+    
+    // Log any errors for debugging
+    results.forEach((result, index) => {
+      if (result.error) {
+        console.error(`Error checking table ${tables[index]}:`, result.error);
+      } else {
+        console.log(`Successfully verified table ${tables[index]} exists`);
+      }
+    });
+    
+    // Set up channel for real-time updates
+    const channel = supabase
+      .channel('public:*')
+      .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+        console.log('Change received:', payload);
+      })
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
     
     console.log('Real-time updates verified for tables');
     return true;
