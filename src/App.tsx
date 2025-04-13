@@ -16,8 +16,16 @@ import { Button } from "./components/ui/button";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { UserCircle2, LogOut } from "lucide-react";
 import { enableRealtimeForTables } from "./integrations/supabase/enableRealtime";
+import { supabase } from "./integrations/supabase/client";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 0, // Ensures data refetches appropriately with real-time updates
+      refetchOnWindowFocus: true,
+    },
+  },
+});
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -105,6 +113,10 @@ const App = () => {
   useEffect(() => {
     // Enable real-time updates for tables when the app initializes
     enableRealtimeForTables();
+    
+    // Configure Supabase to use WebSockets for real-time
+    const { data } = supabase.rest.getRealtime();
+    console.log('Real-time configuration:', data);
   }, []);
 
   return (

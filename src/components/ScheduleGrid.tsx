@@ -42,6 +42,7 @@ export interface Day {
   date: string;
   fullDate: Date;
   isFriday?: boolean;
+  weekNumber?: number;
 }
 
 export interface Session extends SessionCardProps {
@@ -66,7 +67,8 @@ const SortableTrack = ({
   groupColor = '#e2e8f0',
   grouped = false,
   onToggleVisibility,
-  onCopyLink
+  onCopyLink,
+  onAddTrack
 }: { 
   track: Track; 
   onEditName: (id: string, name: string) => void;
@@ -75,9 +77,11 @@ const SortableTrack = ({
   grouped?: boolean;
   onToggleVisibility?: (id: string, visible: boolean) => void;
   onCopyLink?: (id: string, name: string) => void;
+  onAddTrack?: () => void;
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(track.name);
+  const [isHovered, setIsHovered] = useState(false);
   
   const {
     attributes,
@@ -103,6 +107,8 @@ const SortableTrack = ({
       ref={setNodeRef} 
       style={style} 
       className="min-w-[250px] bg-gray-50 p-3 font-semibold text-center border-b border-r border-gray-200 relative"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       {grouped && (
         <div className="text-xs text-gray-500 mb-1" style={{ color: groupColor }}>{groupName}</div>
@@ -158,6 +164,16 @@ const SortableTrack = ({
               </button>
             )}
           </div>
+          
+          {isHovered && onAddTrack && (
+            <button
+              onClick={onAddTrack}
+              className="absolute -right-3 top-1/2 transform -translate-y-1/2 bg-blue-500 text-white rounded-full p-1 shadow-md hover:bg-blue-600 transition-colors z-10"
+              title="Add new track"
+            >
+              <Plus size={16} />
+            </button>
+          )}
         </div>
       )}
     </th>
@@ -489,7 +505,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [days, setDays] = useState<Day[]>(initialDays);
-  const [showMultipleMonths, setShowMultipleMonths] = useState(false);
   const { toast } = useToast();
 
   const sensors = useSensors(
@@ -938,7 +953,7 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
             <tr>
               <th className="w-[180px] bg-gray-50 p-3 font-semibold text-left border-b border-r border-gray-200"></th>
               <SortableContext items={trackIds} strategy={horizontalListSortingStrategy}>
-                {visibleTracks.map(track => {
+                {visibleTracks.map((track, index) => {
                   const group = getTrackGroup(track);
                   return (
                     <SortableTrack 
@@ -950,6 +965,7 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
                       grouped={!!track.groupId}
                       onToggleVisibility={handleToggleTrackVisibility}
                       onCopyLink={handleCopyTrackLink}
+                      onAddTrack={handleAddTrack}
                     />
                   );
                 })}
@@ -965,6 +981,13 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
                 <td className="border-r border-gray-200 p-3 align-top">
                   <div className="text-sm font-medium">{day.name}</div>
                   <div className="text-xs text-gray-500">{day.date}</div>
+                  {day.weekNumber && (
+                    <div className="mt-1">
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700">
+                        Week {day.weekNumber}
+                      </span>
+                    </div>
+                  )}
                   {isSameDay(day.fullDate, today) && (
                     <div className="mt-1">
                       <span className="px-2 py-0.5 text-xs rounded-full bg-green-500 text-white">

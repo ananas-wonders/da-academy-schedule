@@ -44,13 +44,18 @@ const TrackView = () => {
     if (trackId) {
       fetchTrackData();
       
-      // Set up real-time subscription
-      const sessionsChannel = supabase
-        .channel('public:sessions')
+      // Set up real-time subscription with improved channel naming
+      const channel = supabase
+        .channel(`track_${trackId}_sessions`)
         .on('postgres_changes', 
-          { event: '*', schema: 'public', table: 'sessions', filter: `track_id=eq.${trackId}` }, 
-          () => {
-            console.log('Sessions changed, refreshing data');
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'sessions', 
+            filter: `track_id=eq.${trackId}` 
+          }, 
+          (payload) => {
+            console.log('Session change detected:', payload);
             fetchTrackData();
             toast({
               title: "Sessions Updated",
@@ -58,17 +63,19 @@ const TrackView = () => {
             });
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log(`Subscription status for track_${trackId}_sessions:`, status);
+        });
 
       return () => {
-        supabase.removeChannel(sessionsChannel);
+        supabase.removeChannel(channel);
       };
     }
   }, [trackId]);
 
   const fetchTrackData = async () => {
     try {
-      // Fetch track info - simplified the query
+      // Fetch track info
       const { data: trackData, error: trackError } = await supabase
         .from('tracks')
         .select('id, name')

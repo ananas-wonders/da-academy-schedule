@@ -21,7 +21,8 @@ import {
   getYear,
   setMonth,
   setYear,
-  addWeeks
+  addWeeks,
+  getWeek
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Share2, Filter, SlidersHorizontal } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,7 +36,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 const Index = () => {
-  const [viewDensity, setViewDensity] = useState<ViewDensity>('month');
+  const [viewDensity, setViewDensity] = useState<ViewDensity>('week');
   const [tracks, setTracks] = useState<Track[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [days, setDays] = useState<any[]>([]);
@@ -50,8 +51,7 @@ const Index = () => {
     { value: 'week', label: 'Week' },
     { value: '2weeks', label: '2 Weeks' },
     { value: 'month', label: 'Month' },
-    { value: '2months', label: '2 Months' },
-    { value: 'custom', label: 'Custom Range' }
+    { value: '2months', label: '2 Months' }
   ];
   
   useEffect(() => {
@@ -115,13 +115,13 @@ const Index = () => {
     generateDays(currentMonth);
     fetchData();
     
-    // Set up real-time subscription
-    const tracksChannel = supabase
-      .channel('schema-db-changes')
+    // Set up real-time subscriptions with improved channel naming
+    const channel = supabase
+      .channel('schedule_changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'tracks' }, 
-        () => {
-          console.log('Tracks changed, refreshing data');
+        (payload) => {
+          console.log('Track changes detected:', payload);
           fetchData();
           toast({
             title: "Tracks Updated",
@@ -129,14 +129,10 @@ const Index = () => {
           });
         }
       )
-      .subscribe();
-      
-    const sessionsChannel = supabase
-      .channel('schema-db-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'sessions' }, 
-        () => {
-          console.log('Sessions changed, refreshing data');
+        (payload) => {
+          console.log('Session changes detected:', payload);
           fetchData();
           toast({
             title: "Sessions Updated",
@@ -144,14 +140,10 @@ const Index = () => {
           });
         }
       )
-      .subscribe();
-      
-    const groupsChannel = supabase
-      .channel('schema-db-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'track_groups' }, 
-        () => {
-          console.log('Groups changed, refreshing data');
+        (payload) => {
+          console.log('Group changes detected:', payload);
           fetchData();
           toast({
             title: "Track Groups Updated",
@@ -159,12 +151,12 @@ const Index = () => {
           });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
 
     return () => {
-      supabase.removeChannel(tracksChannel);
-      supabase.removeChannel(sessionsChannel);
-      supabase.removeChannel(groupsChannel);
+      supabase.removeChannel(channel);
     };
   }, [currentMonth, viewDensity]);
 
@@ -173,12 +165,13 @@ const Index = () => {
     
     switch (viewDensity) {
       case 'week':
-        start = startOfWeek(baseDate, { weekStartsOn: 1 });
-        end = endOfWeek(baseDate, { weekStartsOn: 1 });
+        // Adjust to start from Saturday (6 = Saturday in JS date) instead of Monday
+        start = startOfWeek(baseDate, { weekStartsOn: 6 });
+        end = endOfWeek(baseDate, { weekStartsOn: 6 });
         break;
       case '2weeks':
-        start = startOfWeek(baseDate, { weekStartsOn: 1 });
-        end = endOfWeek(addWeeks(baseDate, 1), { weekStartsOn: 1 });
+        start = startOfWeek(baseDate, { weekStartsOn: 6 });
+        end = endOfWeek(addWeeks(baseDate, 1), { weekStartsOn: 6 });
         break;
       case 'month':
         start = startOfMonth(baseDate);
@@ -189,19 +182,25 @@ const Index = () => {
         end = endOfMonth(addMonths(baseDate, 1));
         break;
       default:
-        start = startOfMonth(baseDate);
-        end = endOfMonth(baseDate);
+        start = startOfWeek(baseDate, { weekStartsOn: 6 });
+        end = endOfWeek(baseDate, { weekStartsOn: 6 });
     }
     
     const daysArray = eachDayOfInterval({ start, end });
     
-    const formattedDays = daysArray.map(day => ({
-      id: format(day, 'yyyy-MM-dd'),
-      name: format(day, 'EEEE'),
-      date: format(day, 'MMM d, yyyy'),
-      fullDate: day,
-      isFriday: isFriday(day)
-    }));
+    const formattedDays = daysArray.map(day => {
+      // Get week number for Saturday
+      const weekNum = day.getDay() === 6 ? getWeek(day) : undefined;
+      
+      return {
+        id: format(day, 'yyyy-MM-dd'),
+        name: format(day, 'EEEE'),
+        date: format(day, 'MMM d, yyyy'),
+        fullDate: day,
+        isFriday: isFriday(day),
+        weekNumber: weekNum
+      };
+    });
     
     setDays(formattedDays);
   };
@@ -282,9 +281,9 @@ const Index = () => {
   const getTimeRangeDisplay = () => {
     switch (viewDensity) {
       case 'week':
-        return `Week of ${format(startOfWeek(currentMonth, { weekStartsOn: 1 }), 'MMM d, yyyy')}`;
+        return `Week of ${format(startOfWeek(currentMonth, { weekStartsOn: 6 }), 'MMM d, yyyy')}`;
       case '2weeks':
-        return `2 Weeks from ${format(startOfWeek(currentMonth, { weekStartsOn: 1 }), 'MMM d')} to ${format(endOfWeek(addWeeks(currentMonth, 1), { weekStartsOn: 1 }), 'MMM d, yyyy')}`;
+        return `2 Weeks from ${format(startOfWeek(currentMonth, { weekStartsOn: 6 }), 'MMM d')} to ${format(endOfWeek(addWeeks(currentMonth, 1), { weekStartsOn: 6 }), 'MMM d, yyyy')}`;
       case 'month':
         return format(currentMonth, 'MMMM yyyy');
       case '2months':
@@ -305,147 +304,147 @@ const Index = () => {
         
         <Card>
           <CardContent className="p-4">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handlePreviousMonth}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                
-                <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="min-w-[180px]">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {getTimeRangeDisplay()}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <div className="p-3">
-                      <div className="flex justify-between mb-3">
-                        <Select 
-                          value={String(getMonth(currentMonth))} 
-                          onValueChange={(value) => handleMonthChange(Number(value))}
-                        >
-                          <SelectTrigger className="w-[120px]">
-                            <SelectValue placeholder="Month" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: 12 }, (_, i) => (
-                              <SelectItem key={i} value={String(i)}>
-                                {format(new Date(2000, i, 1), 'MMMM')}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        
-                        <Select 
-                          value={String(getYear(currentMonth))} 
-                          onValueChange={(value) => handleYearChange(Number(value))}
-                        >
-                          <SelectTrigger className="w-[100px]">
-                            <SelectValue placeholder="Year" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {years.map(year => (
-                              <SelectItem key={year} value={String(year)}>
-                                {year}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <Calendar
-                        mode="single"
-                        selected={currentMonth}
-                        onSelect={(date) => {
-                          if (date) {
-                            setCurrentMonth(date);
-                            setIsDatePickerOpen(false);
-                          }
-                        }}
-                        className="rounded-md border"
-                      />
-                    </div>
-                  </PopoverContent>
-                </Popover>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleNextMonth}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                
-                <Select value={viewDensity} onValueChange={(value) => setViewDensity(value as ViewDensity)}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Select view" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeRangeOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <Separator orientation="vertical" className="h-8 hidden md:block" />
-              
-              <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline">
-                    <SlidersHorizontal className="h-4 w-4 mr-2" />
-                    Filters & Settings
+            <div className="grid grid-cols-1 gap-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handlePreviousMonth}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
                   </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80">
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Track Visibility</h4>
-                      <ScrollArea className="h-[200px]">
-                        <div className="space-y-2">
-                          {tracks.map(track => (
-                            <div key={track.id} className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2">
-                                <Switch
-                                  id={`track-${track.id}`}
-                                  checked={trackVisibility[track.id] !== false}
-                                  onCheckedChange={(checked) => handleToggleTrackVisibility(track.id, checked)}
-                                />
-                                <Label htmlFor={`track-${track.id}`}>{track.name}</Label>
-                              </div>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8"
-                                title="Copy track link"
-                                onClick={() => handleCopyTrackLink(track.id, track.name)}
-                              >
-                                <Share2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div>
-                      <h4 className="font-medium mb-2">Group Settings</h4>
-                      <Button variant="outline" size="sm" className="w-full">
-                        Manage Track Groups
+                  
+                  <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="min-w-[180px]">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {getTimeRangeDisplay()}
                       </Button>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <div className="p-3">
+                        <div className="flex justify-between mb-3">
+                          <Select 
+                            value={String(getMonth(currentMonth))} 
+                            onValueChange={(value) => handleMonthChange(Number(value))}
+                          >
+                            <SelectTrigger className="w-[120px]">
+                              <SelectValue placeholder="Month" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 12 }, (_, i) => (
+                                <SelectItem key={i} value={String(i)}>
+                                  {format(new Date(2000, i, 1), 'MMMM')}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          
+                          <Select 
+                            value={String(getYear(currentMonth))} 
+                            onValueChange={(value) => handleYearChange(Number(value))}
+                          >
+                            <SelectTrigger className="w-[100px]">
+                              <SelectValue placeholder="Year" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {years.map(year => (
+                                <SelectItem key={year} value={String(year)}>
+                                  {year}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <Calendar
+                          mode="single"
+                          selected={currentMonth}
+                          onSelect={(date) => {
+                            if (date) {
+                              setCurrentMonth(date);
+                              setIsDatePickerOpen(false);
+                            }
+                          }}
+                          className="rounded-md border"
+                        />
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleNextMonth}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  
+                  <Select value={viewDensity} onValueChange={(value) => setViewDensity(value as ViewDensity)}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Select view" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timeRangeOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline">
+                        <SlidersHorizontal className="h-4 w-4 mr-2" />
+                        Filters & Settings
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80">
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="font-medium mb-2">Track Visibility</h4>
+                          <ScrollArea className="h-[200px]">
+                            <div className="space-y-2">
+                              {tracks.map(track => (
+                                <div key={track.id} className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-2">
+                                    <Switch
+                                      id={`track-${track.id}`}
+                                      checked={trackVisibility[track.id] !== false}
+                                      onCheckedChange={(checked) => handleToggleTrackVisibility(track.id, checked)}
+                                    />
+                                    <Label htmlFor={`track-${track.id}`}>{track.name}</Label>
+                                  </div>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8"
+                                    title="Copy track link"
+                                    onClick={() => handleCopyTrackLink(track.id, track.name)}
+                                  >
+                                    <Share2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div>
+                          <h4 className="font-medium mb-2">Group Settings</h4>
+                          <Button variant="outline" size="sm" className="w-full">
+                            Manage Track Groups
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
