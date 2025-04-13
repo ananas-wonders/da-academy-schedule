@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +8,8 @@ import { Edit, Trash, Plus, Search, MessageCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 type Instructor = {
   id: string;
@@ -261,7 +264,7 @@ const InstructorDetails = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <label htmlFor="name" className="text-sm font-medium">Name</label>
+                  <Label htmlFor="name">Name</Label>
                   <Input 
                     id="name" 
                     value={editInstructor ? editInstructor.name : newInstructor.name} 
@@ -272,7 +275,7 @@ const InstructorDetails = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="email" className="text-sm font-medium">Email</label>
+                  <Label htmlFor="email">Email</Label>
                   <Input 
                     id="email" 
                     type="email"
@@ -284,7 +287,7 @@ const InstructorDetails = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="phone" className="text-sm font-medium">Phone</label>
+                  <Label htmlFor="phone">Phone</Label>
                   <Input 
                     id="phone" 
                     value={editInstructor ? editInstructor.phone : newInstructor.phone} 
@@ -295,7 +298,7 @@ const InstructorDetails = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="subject" className="text-sm font-medium">Subject</label>
+                  <Label htmlFor="subject">Subject</Label>
                   <Input 
                     id="subject" 
                     value={editInstructor ? editInstructor.subject : newInstructor.subject} 
@@ -306,7 +309,7 @@ const InstructorDetails = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="company" className="text-sm font-medium">Company</label>
+                  <Label htmlFor="company">Company</Label>
                   <Input 
                     id="company" 
                     value={editInstructor ? editInstructor.company : newInstructor.company} 
@@ -317,7 +320,7 @@ const InstructorDetails = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="specialization" className="text-sm font-medium">Specializations</label>
+                  <Label htmlFor="specialization">Specializations</Label>
                   <div className="flex space-x-2">
                     <Input 
                       id="specialization"
@@ -343,10 +346,9 @@ const InstructorDetails = () => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="notes" className="text-sm font-medium">Notes</label>
-                  <textarea 
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea 
                     id="notes" 
-                    className="w-full p-2 border rounded-md"
                     rows={4}
                     value={editInstructor ? editInstructor.notes : newInstructor.notes} 
                     onChange={(e) => editInstructor 

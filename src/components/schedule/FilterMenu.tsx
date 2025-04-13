@@ -3,7 +3,6 @@ import React from 'react';
 import { Track } from '@/types/schedule';
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
 import { SlidersHorizontal } from "lucide-react";
 import TrackFilter from './TrackFilter';
 
@@ -29,7 +28,7 @@ const FilterMenu: React.FC<FilterMenuProps> = ({
       <PopoverTrigger asChild>
         <Button variant="outline">
           <SlidersHorizontal className="h-4 w-4 mr-2" />
-          Filters & Settings
+          Filters
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80">
@@ -42,15 +41,6 @@ const FilterMenu: React.FC<FilterMenuProps> = ({
               setTrackVisibility={setTrackVisibility}
               setTracks={setTracks}
             />
-          </div>
-          
-          <Separator />
-          
-          <div>
-            <h4 className="font-medium mb-2">Group Settings</h4>
-            <Button variant="outline" size="sm" className="w-full">
-              Manage Track Groups
-            </Button>
           </div>
         </div>
       </PopoverContent>
