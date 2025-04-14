@@ -2,11 +2,12 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, LayoutGrid, LayoutList } from 'lucide-react';
+import { Plus, Search, LayoutGrid, LayoutList, FolderKanban } from 'lucide-react';
 import { Track } from '@/types/track';
 import TrackCard from '@/components/track/TrackCard';
 import TrackTable from '@/components/track/TrackTable';
 import TrackFormDialog from '@/components/track/TrackFormDialog';
+import TrackGroupsManager from '@/components/track/TrackGroupsManager';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -14,56 +15,60 @@ const Tracks: React.FC = () => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [groupsDialogOpen, setGroupsDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
   const [editTrack, setEditTrack] = useState<Track | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   // Fetch tracks from Supabase
-  useEffect(() => {
-    const fetchTracks = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('tracks')
-          .select('*');
-        
-        if (error) throw error;
-        
-        // Convert data to our Track interface format
-        const formattedTracks: Track[] = data.map((track: any) => ({
-          id: track.id,
-          programName: track.name || '',
-          code: track.code || '',
-          supervisor: track.supervisor || '',
-          deputySupervisor: track.deputy_supervisor || '',
-          studentsCount: track.students_count || 0,
-          studentCoordinator: track.student_coordinator || '',
-          teamsLink: track.teams_link || '',
-          assignmentFolder: track.assignment_folder || '',
-          gradeSheet: track.grade_sheet || '',
-          attendanceForm: track.attendance_form || '',
-          telegramGeneralGroup: track.telegram_general_group || '',
-          telegramCourseGroup: track.telegram_course_group || '',
-          createdAt: track.created_at,
-          updatedAt: track.updated_at
-        }));
-        
-        setTracks(formattedTracks);
-      } catch (error) {
-        console.error('Error fetching tracks:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to load tracks data."
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchTracks();
+  const fetchTracks = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('tracks')
+        .select('*, track_groups(id, name, color)');
+      
+      if (error) throw error;
+      
+      // Convert data to our Track interface format
+      const formattedTracks: Track[] = data.map((track: any) => ({
+        id: track.id,
+        programName: track.name || '',
+        code: track.code || '',
+        supervisor: track.supervisor || '',
+        deputySupervisor: track.deputy_supervisor || '',
+        studentsCount: track.students_count || 0,
+        studentCoordinator: track.student_coordinator || '',
+        teamsLink: track.teams_link || '',
+        assignmentFolder: track.assignment_folder || '',
+        gradeSheet: track.grade_sheet || '',
+        attendanceForm: track.attendance_form || '',
+        telegramGeneralGroup: track.telegram_general_group || '',
+        telegramCourseGroup: track.telegram_course_group || '',
+        groupId: track.group_id || null,
+        groupName: track.track_groups ? track.track_groups.name : '',
+        groupColor: track.track_groups ? track.track_groups.color : '',
+        createdAt: track.created_at,
+        updatedAt: track.updated_at
+      }));
+      
+      setTracks(formattedTracks);
+    } catch (error) {
+      console.error('Error fetching tracks:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load tracks data."
+      });
+    } finally {
+      setLoading(false);
+    }
   }, [toast]);
+
+  useEffect(() => {
+    fetchTracks();
+  }, [fetchTracks]);
 
   // Memoize filtered tracks for performance
   const filteredTracks = useMemo(() => tracks.filter(track => 
@@ -93,7 +98,8 @@ const Tracks: React.FC = () => {
         grade_sheet: trackWithId.gradeSheet,
         attendance_form: trackWithId.attendanceForm,
         telegram_general_group: trackWithId.telegramGeneralGroup,
-        telegram_course_group: trackWithId.telegramCourseGroup
+        telegram_course_group: trackWithId.telegramCourseGroup,
+        group_id: trackWithId.groupId
       };
       
       const { error } = await supabase
@@ -140,6 +146,7 @@ const Tracks: React.FC = () => {
         attendance_form: updatedTrack.attendanceForm,
         telegram_general_group: updatedTrack.telegramGeneralGroup,
         telegram_course_group: updatedTrack.telegramCourseGroup,
+        group_id: updatedTrack.groupId,
         updated_at: new Date().toISOString()
       };
       
@@ -250,6 +257,9 @@ const Tracks: React.FC = () => {
               <LayoutList className="h-4 w-4 mr-2" /> Table
             </Button>
           </div>
+          <Button variant="outline" onClick={() => setGroupsDialogOpen(true)}>
+            <FolderKanban className="mr-2 h-4 w-4" /> Manage Groups
+          </Button>
           <Button onClick={handleOpenDialog}>
             <Plus className="mr-2 h-4 w-4" /> Add New Track
           </Button>
@@ -299,6 +309,12 @@ const Tracks: React.FC = () => {
         onOpenChange={setDialogOpen}
         track={editTrack}
         onSave={handleSaveTrack}
+      />
+      
+      <TrackGroupsManager
+        open={groupsDialogOpen}
+        onOpenChange={setGroupsDialogOpen}
+        onGroupsUpdated={fetchTracks}
       />
     </div>
   );

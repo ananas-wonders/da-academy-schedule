@@ -13,6 +13,9 @@ export interface Track {
   attendanceForm?: string;
   telegramGeneralGroup?: string;
   telegramCourseGroup?: string;
+  groupId?: string | null;
+  groupName?: string;
+  groupColor?: string;
   createdAt: string;
   updatedAt: string;
 }

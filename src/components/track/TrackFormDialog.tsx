@@ -5,7 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Track } from '@/types/track';
+import { supabase } from '@/integrations/supabase/client';
+
+interface TrackGroup {
+  id: string;
+  name: string;
+  color?: string;
+}
 
 interface TrackFormDialogProps {
   open: boolean;
@@ -33,12 +41,34 @@ const TrackFormDialog: React.FC<TrackFormDialogProps> = ({
       gradeSheet: '',
       attendanceForm: '',
       telegramGeneralGroup: '',
-      telegramCourseGroup: ''
+      telegramCourseGroup: '',
+      groupId: null
     }
   );
+  const [trackGroups, setTrackGroups] = useState<TrackGroup[]>([]);
+  const [loading, setLoading] = useState(false);
 
+  // Fetch track groups when dialog opens
   useEffect(() => {
+    const fetchTrackGroups = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('track_groups')
+          .select('*');
+        
+        if (error) throw error;
+        
+        setTrackGroups(data || []);
+      } catch (error) {
+        console.error('Error fetching track groups:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
     if (open) {
+      fetchTrackGroups();
       setFormData(track || {
         programName: '',
         code: '',
@@ -51,7 +81,8 @@ const TrackFormDialog: React.FC<TrackFormDialogProps> = ({
         gradeSheet: '',
         attendanceForm: '',
         telegramGeneralGroup: '',
-        telegramCourseGroup: ''
+        telegramCourseGroup: '',
+        groupId: null
       });
     }
   }, [track, open]);
@@ -135,6 +166,34 @@ const TrackFormDialog: React.FC<TrackFormDialogProps> = ({
                   onChange={(e) => handleChange('studentCoordinator', e.target.value)} 
                 />
               </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="groupId">Track Group</Label>
+                <Select 
+                  value={formData.groupId || ''} 
+                  onValueChange={(value) => handleChange('groupId', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a track group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {trackGroups.map(group => (
+                      <SelectItem key={group.id} value={group.id}>
+                        <div className="flex items-center">
+                          {group.color && (
+                            <div 
+                              className="w-3 h-3 rounded-full mr-2" 
+                              style={{ backgroundColor: group.color }}
+                            />
+                          )}
+                          {group.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             <div className="pt-2 pb-1">
@@ -207,7 +266,7 @@ const TrackFormDialog: React.FC<TrackFormDialogProps> = ({
         
         <DialogFooter className="px-6 py-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit}>
+          <Button onClick={handleSubmit} disabled={loading}>
             {track ? 'Save Changes' : 'Add Track'}
           </Button>
         </DialogFooter>

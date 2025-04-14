@@ -34,7 +34,20 @@ const TrackCard: React.FC<TrackCardProps> = ({ track, onEdit, onDelete }) => {
         <div className="flex justify-between items-start">
           <div>
             <h3 className="text-xl font-bold">{track.programName}</h3>
-            <p className="text-sm text-muted-foreground">{track.code}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-sm text-muted-foreground">{track.code}</p>
+              {track.groupName && (
+                <Badge 
+                  variant="outline" 
+                  style={{ 
+                    borderColor: track.groupColor || undefined,
+                    color: track.groupColor || undefined 
+                  }}
+                >
+                  {track.groupName}
+                </Badge>
+              )}
+            </div>
           </div>
           <Badge variant="outline" className="flex items-center">
             <Users className="h-3 w-3 mr-1" /> {track.studentsCount}

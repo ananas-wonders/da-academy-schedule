@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Edit, Trash, ExternalLink } from 'lucide-react';
 import { Track } from '@/types/track';
+import { Badge } from '@/components/ui/badge';
 
 interface TrackTableProps {
   tracks: Track[];
@@ -35,6 +36,7 @@ const TrackTable: React.FC<TrackTableProps> = ({ tracks, onEdit, onDelete }) => 
             <TableRow>
               <TableHead>Program</TableHead>
               <TableHead>Code</TableHead>
+              <TableHead>Group</TableHead>
               <TableHead>Supervisor</TableHead>
               <TableHead>Students</TableHead>
               <TableHead>Teams</TableHead>
@@ -45,7 +47,7 @@ const TrackTable: React.FC<TrackTableProps> = ({ tracks, onEdit, onDelete }) => 
           <TableBody>
             {tracks.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No tracks found
                 </TableCell>
               </TableRow>
@@ -56,6 +58,21 @@ const TrackTable: React.FC<TrackTableProps> = ({ tracks, onEdit, onDelete }) => 
                     {track.programName}
                   </TableCell>
                   <TableCell>{track.code}</TableCell>
+                  <TableCell>
+                    {track.groupName ? (
+                      <Badge 
+                        variant="outline" 
+                        style={{ 
+                          borderColor: track.groupColor || undefined,
+                          color: track.groupColor || undefined 
+                        }}
+                      >
+                        {track.groupName}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">None</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {track.supervisor}
                     {track.deputySupervisor && (

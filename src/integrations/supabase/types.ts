@@ -202,26 +202,59 @@ export type Database = {
       }
       tracks: {
         Row: {
+          assignment_folder: string | null
+          attendance_form: string | null
+          code: string | null
           created_at: string
+          deputy_supervisor: string | null
+          grade_sheet: string | null
           group_id: string | null
           id: string
           name: string
+          student_coordinator: string | null
+          students_count: number | null
+          supervisor: string | null
+          teams_link: string | null
+          telegram_course_group: string | null
+          telegram_general_group: string | null
           updated_at: string
           visible: boolean
         }
         Insert: {
+          assignment_folder?: string | null
+          attendance_form?: string | null
+          code?: string | null
           created_at?: string
+          deputy_supervisor?: string | null
+          grade_sheet?: string | null
           group_id?: string | null
           id: string
           name: string
+          student_coordinator?: string | null
+          students_count?: number | null
+          supervisor?: string | null
+          teams_link?: string | null
+          telegram_course_group?: string | null
+          telegram_general_group?: string | null
           updated_at?: string
           visible?: boolean
         }
         Update: {
+          assignment_folder?: string | null
+          attendance_form?: string | null
+          code?: string | null
           created_at?: string
+          deputy_supervisor?: string | null
+          grade_sheet?: string | null
           group_id?: string | null
           id?: string
           name?: string
+          student_coordinator?: string | null
+          students_count?: number | null
+          supervisor?: string | null
+          teams_link?: string | null
+          telegram_course_group?: string | null
+          telegram_general_group?: string | null
           updated_at?: string
           visible?: boolean
         }

@@ -8,6 +8,8 @@ import { Edit, Trash, Plus, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 type Course = {
   id: string;
@@ -19,74 +21,16 @@ type Course = {
   selfStudyHours: number;
   totalHours: number;
   numberOfSessions: number;
+  scheduledSessions: number;
   status: 'scheduled' | 'partially-scheduled' | 'not-scheduled';
   category: string;
   notes: string;
   trackId: string;
 };
 
-// Mock data for courses
-const initialCourses: Course[] = [
-  { 
-    id: 'course-1', 
-    courseCode: 'DA101',
-    term: 'Fall 2024',
-    title: 'Introduction to Digital Art', 
-    lectureHours: 20,
-    labHours: 10, 
-    selfStudyHours: 15, 
-    totalHours: 45, 
-    numberOfSessions: 15,
-    status: 'scheduled',
-    category: 'Fundamentals',
-    notes: 'Required for all students',
-    trackId: 'track-1', 
-  },
-  { 
-    id: 'course-2', 
-    courseCode: 'DA102',
-    term: 'Fall 2024',
-    title: 'Color Theory Fundamentals', 
-    lectureHours: 15,
-    labHours: 10, 
-    selfStudyHours: 10, 
-    totalHours: 35, 
-    numberOfSessions: 12,
-    status: 'partially-scheduled',
-    category: 'Fundamentals',
-    notes: '',
-    trackId: 'track-1', 
-  },
-  { 
-    id: 'course-3', 
-    courseCode: 'DA201',
-    term: 'Fall 2024',
-    title: 'Digital Composition', 
-    lectureHours: 18,
-    labHours: 15, 
-    selfStudyHours: 12, 
-    totalHours: 45, 
-    numberOfSessions: 15,
-    status: 'not-scheduled',
-    category: 'Intermediate',
-    notes: 'Prerequisite: DA101',
-    trackId: 'track-2', 
-  },
-  // ... keep existing code (remaining courses)
-];
-
-const trackOptions = [
-  { id: 'track-1', name: 'Beginner Course' },
-  { id: 'track-2', name: 'Intermediate' },
-  { id: 'track-3', name: 'Advanced Course' },
-  { id: 'track-4', name: 'Expert Racing' }
-];
-
 const CourseLists = () => {
-  const [courses, setCourses] = useState<Course[]>(() => {
-    const savedCourses = localStorage.getItem('courses');
-    return savedCourses ? JSON.parse(savedCourses) : initialCourses;
-  });
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [tracks, setTracks] = useState<{id: string, name: string}[]>([]);
   const [activeTrack, setActiveTrack] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
@@ -100,18 +44,135 @@ const CourseLists = () => {
     selfStudyHours: 0,
     totalHours: 0,
     numberOfSessions: 0,
+    scheduledSessions: 0,
     status: 'not-scheduled',
     category: '',
     notes: '',
-    trackId: 'track-1'
+    trackId: ''
   });
-  const [sessionCounts, setSessionCounts] = useState<{[courseTitle: string]: number}>({});
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  // Load session counts from the sessions data
+  // Load tracks and courses from supabase
   useEffect(() => {
-    const loadSessionData = () => {
+    const fetchData = async () => {
       try {
-        const sessionsData = JSON.parse(localStorage.getItem('sessions') || '[]');
+        setLoading(true);
+        
+        // Fetch tracks first
+        const { data: trackData, error: trackError } = await supabase
+          .from('tracks')
+          .select('id, name')
+          .order('name');
+        
+        if (trackError) throw trackError;
+        
+        setTracks(trackData);
+        
+        // If there are tracks, set the first one as active
+        if (trackData.length > 0) {
+          setActiveTrack('all');
+          setNewCourse(prev => ({ ...prev, trackId: trackData[0].id }));
+        }
+        
+        // Fetch courses
+        const { data: courseData, error: courseError } = await supabase
+          .from('courses')
+          .select('*');
+        
+        if (courseError) throw courseError;
+        
+        // Transform course data to match our type
+        const formattedCourses: Course[] = courseData.map((course: any) => ({
+          id: course.id,
+          courseCode: course.course_code,
+          title: course.title,
+          term: course.term || '',
+          lectureHours: course.lecture_hours || 0,
+          labHours: course.lab_hours || 0,
+          selfStudyHours: course.self_study_hours || 0,
+          totalHours: course.total_hours || 0,
+          numberOfSessions: course.number_of_sessions || 0,
+          scheduledSessions: course.scheduled_sessions || 0,
+          status: course.status || 'not-scheduled',
+          category: course.category || '',
+          notes: course.notes || '',
+          trackId: course.track_id || ''
+        }));
+        
+        setCourses(formattedCourses);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load data."
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+    
+    // Set up realtime subscription for courses
+    const courseSubscription = supabase
+      .channel('courses-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'courses' }, 
+        (payload) => {
+          console.log('Course change detected:', payload);
+          // Refresh courses when changes happen
+          supabase
+            .from('courses')
+            .select('*')
+            .then(({ data, error }) => {
+              if (error) {
+                console.error('Error refreshing courses:', error);
+                return;
+              }
+              
+              if (data) {
+                const formattedCourses: Course[] = data.map((course: any) => ({
+                  id: course.id,
+                  courseCode: course.course_code,
+                  title: course.title,
+                  term: course.term || '',
+                  lectureHours: course.lecture_hours || 0,
+                  labHours: course.lab_hours || 0,
+                  selfStudyHours: course.self_study_hours || 0,
+                  totalHours: course.total_hours || 0,
+                  numberOfSessions: course.number_of_sessions || 0,
+                  scheduledSessions: course.scheduled_sessions || 0,
+                  status: course.status || 'not-scheduled',
+                  category: course.category || '',
+                  notes: course.notes || '',
+                  trackId: course.track_id || ''
+                }));
+                
+                setCourses(formattedCourses);
+              }
+            });
+        }
+      )
+      .subscribe();
+    
+    // Cleanup subscription
+    return () => {
+      supabase.removeChannel(courseSubscription);
+    };
+  }, [toast]);
+
+  // Load sessions count for each course
+  useEffect(() => {
+    const loadSessionData = async () => {
+      try {
+        // Get all sessions
+        const { data: sessionsData, error } = await supabase
+          .from('sessions')
+          .select('title');
+        
+        if (error) throw error;
         
         // Count sessions per course title
         const counts: {[courseTitle: string]: number} = {};
@@ -122,77 +183,207 @@ const CourseLists = () => {
           }
         });
         
-        setSessionCounts(counts);
+        // Update course scheduled sessions based on session counts
+        const updatedCourses = courses.map(course => {
+          const scheduledSessions = counts[course.title] || 0;
+          return {
+            ...course,
+            scheduledSessions,
+            status: getStatus(scheduledSessions, course.numberOfSessions)
+          };
+        });
+        
+        setCourses(updatedCourses);
+        
+        // Update database with new scheduled session counts and status
+        updatedCourses.forEach(async (course) => {
+          if (course.scheduledSessions !== 0) {
+            await supabase
+              .from('courses')
+              .update({
+                scheduled_sessions: course.scheduledSessions,
+                status: course.status
+              })
+              .eq('id', course.id);
+          }
+        });
       } catch (e) {
         console.error('Error loading session data:', e);
       }
     };
     
-    loadSessionData();
-  }, []);
-
-  // Save to localStorage whenever courses change
-  useEffect(() => {
-    localStorage.setItem('courses', JSON.stringify(courses));
+    if (courses.length > 0) {
+      loadSessionData();
+    }
   }, [courses]);
+
+  // Helper function to determine status based on scheduled vs total sessions
+  const getStatus = (scheduled: number, total: number): Course['status'] => {
+    if (scheduled === 0) return 'not-scheduled';
+    if (scheduled < total) return 'partially-scheduled';
+    return 'scheduled';
+  };
 
   const filteredCourses = activeTrack === 'all' 
     ? courses 
     : courses.filter(course => course.trackId === activeTrack);
 
   const getSessionProgress = (course: Course) => {
-    const scheduledSessions = sessionCounts[course.title] || 0;
     const progressPercentage = course.numberOfSessions > 0 
-      ? Math.min(100, Math.round((scheduledSessions / course.numberOfSessions) * 100)) 
+      ? Math.min(100, Math.round((course.scheduledSessions / course.numberOfSessions) * 100)) 
       : 0;
     
     return {
-      scheduled: scheduledSessions,
+      scheduled: course.scheduledSessions,
       total: course.numberOfSessions,
       percentage: progressPercentage
     };
   };
 
-  const handleAddCourse = () => {
-    // Calculate total hours and number of sessions
-    const totalHours = Number(newCourse.lectureHours) + Number(newCourse.labHours) + Number(newCourse.selfStudyHours);
-    const numberOfSessions = Math.ceil(totalHours / 3);
-
-    const newCourseWithId = {
-      ...newCourse,
-      id: `course-${Date.now()}`,
-      totalHours,
-      numberOfSessions
-    };
-    
-    setCourses([...courses, newCourseWithId]);
-    setDialogOpen(false);
-    resetForm();
+  const handleAddCourse = async () => {
+    try {
+      // Calculate total hours and number of sessions
+      const totalHours = Number(newCourse.lectureHours) + Number(newCourse.labHours) + Number(newCourse.selfStudyHours);
+      const numberOfSessions = Math.ceil(totalHours / 3);
+      
+      const courseId = `course-${Date.now()}`;
+      
+      const courseData = {
+        id: courseId,
+        course_code: newCourse.courseCode,
+        title: newCourse.title,
+        term: newCourse.term,
+        lecture_hours: Number(newCourse.lectureHours),
+        lab_hours: Number(newCourse.labHours),
+        self_study_hours: Number(newCourse.selfStudyHours),
+        total_hours: totalHours,
+        number_of_sessions: numberOfSessions,
+        scheduled_sessions: 0,
+        status: 'not-scheduled',
+        category: newCourse.category,
+        notes: newCourse.notes,
+        track_id: newCourse.trackId
+      };
+      
+      const { error } = await supabase
+        .from('courses')
+        .insert([courseData]);
+      
+      if (error) throw error;
+      
+      const newCourseWithId: Course = {
+        id: courseId,
+        ...newCourse,
+        totalHours,
+        numberOfSessions,
+        scheduledSessions: 0
+      };
+      
+      setCourses([...courses, newCourseWithId]);
+      setDialogOpen(false);
+      resetForm();
+      
+      toast({
+        title: "Course Added",
+        description: `${newCourse.title} has been added successfully.`
+      });
+    } catch (error) {
+      console.error('Error adding course:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to add course."
+      });
+    }
   };
 
-  const handleEditCourse = () => {
+  const handleEditCourse = async () => {
     if (!editCourse) return;
     
-    // Recalculate totals
-    const totalHours = Number(editCourse.lectureHours) + Number(editCourse.labHours) + Number(editCourse.selfStudyHours);
-    const numberOfSessions = Math.ceil(totalHours / 3);
-    
-    const updatedCourse = {
-      ...editCourse,
-      totalHours,
-      numberOfSessions
-    };
-    
-    setCourses(courses.map(course => 
-      course.id === updatedCourse.id ? updatedCourse : course
-    ));
-    
-    setDialogOpen(false);
-    setEditCourse(null);
+    try {
+      // Recalculate totals
+      const totalHours = Number(editCourse.lectureHours) + Number(editCourse.labHours) + Number(editCourse.selfStudyHours);
+      const numberOfSessions = Math.ceil(totalHours / 3);
+      
+      // Determine status based on scheduled sessions
+      const status = getStatus(editCourse.scheduledSessions, numberOfSessions);
+      
+      const courseData = {
+        course_code: editCourse.courseCode,
+        title: editCourse.title,
+        term: editCourse.term,
+        lecture_hours: Number(editCourse.lectureHours),
+        lab_hours: Number(editCourse.labHours),
+        self_study_hours: Number(editCourse.selfStudyHours),
+        total_hours: totalHours,
+        number_of_sessions: numberOfSessions,
+        status,
+        category: editCourse.category,
+        notes: editCourse.notes,
+        track_id: editCourse.trackId
+      };
+      
+      const { error } = await supabase
+        .from('courses')
+        .update(courseData)
+        .eq('id', editCourse.id);
+      
+      if (error) throw error;
+      
+      const updatedCourse = {
+        ...editCourse,
+        totalHours,
+        numberOfSessions,
+        status
+      };
+      
+      setCourses(courses.map(course => 
+        course.id === updatedCourse.id ? updatedCourse : course
+      ));
+      
+      setDialogOpen(false);
+      setEditCourse(null);
+      
+      toast({
+        title: "Course Updated",
+        description: `${editCourse.title} has been updated successfully.`
+      });
+    } catch (error) {
+      console.error('Error updating course:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update course."
+      });
+    }
   };
 
-  const handleDeleteCourse = (id: string) => {
-    setCourses(courses.filter(course => course.id !== id));
+  const handleDeleteCourse = async (id: string) => {
+    try {
+      const courseToDelete = courses.find(course => course.id === id);
+      
+      const { error } = await supabase
+        .from('courses')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setCourses(courses.filter(course => course.id !== id));
+      
+      toast({
+        variant: "destructive",
+        title: "Course Removed",
+        description: `${courseToDelete?.title} has been removed.`
+      });
+    } catch (error) {
+      console.error('Error deleting course:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete course."
+      });
+    }
   };
 
   const resetForm = () => {
@@ -205,10 +396,11 @@ const CourseLists = () => {
       selfStudyHours: 0,
       totalHours: 0,
       numberOfSessions: 0,
+      scheduledSessions: 0,
       status: 'not-scheduled',
       category: '',
       notes: '',
-      trackId: 'track-1'
+      trackId: tracks.length > 0 ? tracks[0].id : ''
     });
   };
 
@@ -234,6 +426,17 @@ const CourseLists = () => {
       default: return 'text-gray-600';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-600">Loading courses data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8">
@@ -335,7 +538,7 @@ const CourseLists = () => {
                         : handleNewCourseChange('trackId', e.target.value)
                       }
                     >
-                      {trackOptions.map(track => (
+                      {tracks.map(track => (
                         <option key={track.id} value={track.id}>{track.name}</option>
                       ))}
                     </select>
@@ -413,6 +616,19 @@ const CourseLists = () => {
                     </div>
                   </div>
                   
+                  {editCourse && (
+                    <div className="space-y-2">
+                      <label htmlFor="scheduledSessions" className="text-sm font-medium">Scheduled Sessions</label>
+                      <Input 
+                        id="scheduledSessions" 
+                        type="number"
+                        min="0"
+                        value={editCourse.scheduledSessions} 
+                        onChange={(e) => handleEditCourseChange('scheduledSessions', Number(e.target.value))} 
+                      />
+                    </div>
+                  )}
+                  
                   <div className="space-y-2">
                     <label htmlFor="status" className="text-sm font-medium">Status</label>
                     <select 
@@ -458,7 +674,7 @@ const CourseLists = () => {
       <Tabs defaultValue="all" onValueChange={setActiveTrack}>
         <TabsList className="mb-4">
           <TabsTrigger value="all">All Tracks</TabsTrigger>
-          {trackOptions.map(track => (
+          {tracks.map(track => (
             <TabsTrigger key={track.id} value={track.id}>{track.name}</TabsTrigger>
           ))}
         </TabsList>
@@ -466,66 +682,72 @@ const CourseLists = () => {
         <TabsContent value={activeTrack} className="mt-0">
           {viewMode === 'cards' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredCourses.map(course => {
-                const progress = getSessionProgress(course);
-                return (
-                  <Card key={course.id}>
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle>{course.title}</CardTitle>
-                          <CardDescription>
-                            {course.courseCode} - {course.term}
-                          </CardDescription>
+              {filteredCourses.length === 0 ? (
+                <div className="col-span-full text-center py-12 text-gray-500">
+                  No courses found for this track.
+                </div>
+              ) : (
+                filteredCourses.map(course => {
+                  const progress = getSessionProgress(course);
+                  return (
+                    <Card key={course.id}>
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle>{course.title}</CardTitle>
+                            <CardDescription>
+                              {course.courseCode} - {course.term}
+                            </CardDescription>
+                          </div>
+                          <div className={`text-sm font-medium ${getStatusColor(course.status)}`}>
+                            {course.status.replace('-', ' ')}
+                          </div>
                         </div>
-                        <div className={`text-sm font-medium ${getStatusColor(course.status)}`}>
-                          {course.status.replace('-', ' ')}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-600 mb-4">{course.category}</p>
-                      
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span>Track:</span>
-                          <span className="font-medium">{trackOptions.find(t => t.id === course.trackId)?.name}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Hours:</span>
-                          <span className="font-medium">L: {course.lectureHours}, Lab: {course.labHours}, Self: {course.selfStudyHours}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Total Hours:</span>
-                          <span className="font-medium">{course.totalHours}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Sessions:</span>
-                          <span className="font-medium">{course.numberOfSessions}</span>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-gray-600 mb-4">{course.category}</p>
+                        
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span>Track:</span>
+                            <span className="font-medium">{tracks.find(t => t.id === course.trackId)?.name}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Hours:</span>
+                            <span className="font-medium">L: {course.lectureHours}, Lab: {course.labHours}, Self: {course.selfStudyHours}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Total Hours:</span>
+                            <span className="font-medium">{course.totalHours}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Sessions:</span>
+                            <span className="font-medium">{course.numberOfSessions}</span>
+                          </div>
+                          
+                          <div className="mt-3">
+                            <div className="flex justify-between text-xs mb-1">
+                              <span>Progress:</span>
+                              <span>{progress.scheduled} of {progress.total} sessions scheduled ({progress.percentage}%)</span>
+                            </div>
+                            <Progress value={progress.percentage} className="h-2" />
+                          </div>
                         </div>
                         
-                        <div className="mt-3">
-                          <div className="flex justify-between text-xs mb-1">
-                            <span>Progress:</span>
-                            <span>{progress.scheduled} of {progress.total} sessions scheduled ({progress.percentage}%)</span>
-                          </div>
-                          <Progress value={progress.percentage} className="h-2" />
-                        </div>
-                      </div>
-                      
-                      {course.notes && <p className="text-sm italic mt-4">{course.notes}</p>}
-                    </CardContent>
-                    <CardFooter className="flex justify-end space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => startEdit(course)}>
-                        <Edit className="h-4 w-4 mr-1" /> Edit
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDeleteCourse(course.id)}>
-                        <Trash className="h-4 w-4 mr-1" /> Delete
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                );
-              })}
+                        {course.notes && <p className="text-sm italic mt-4">{course.notes}</p>}
+                      </CardContent>
+                      <CardFooter className="flex justify-end space-x-2">
+                        <Button variant="outline" size="sm" onClick={() => startEdit(course)}>
+                          <Edit className="h-4 w-4 mr-1" /> Edit
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteCourse(course.id)}>
+                          <Trash className="h-4 w-4 mr-1" /> Delete
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  );
+                })
+              )}
             </div>
           ) : (
             <div className="rounded-md border overflow-hidden">
@@ -546,38 +768,46 @@ const CourseLists = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCourses.map(course => {
-                    const progress = getSessionProgress(course);
-                    return (
-                      <TableRow key={course.id}>
-                        <TableCell className="font-medium">{course.courseCode}</TableCell>
-                        <TableCell>{course.title}</TableCell>
-                        <TableCell>{trackOptions.find(t => t.id === course.trackId)?.name}</TableCell>
-                        <TableCell>{course.category}</TableCell>
-                        <TableCell>{course.term}</TableCell>
-                        <TableCell>{course.lectureHours}/{course.labHours}/{course.selfStudyHours}</TableCell>
-                        <TableCell>{course.totalHours}</TableCell>
-                        <TableCell>{course.numberOfSessions}</TableCell>
-                        <TableCell className={getStatusColor(course.status)}>
-                          {course.status.replace('-', ' ')}
-                        </TableCell>
-                        <TableCell className="w-40">
-                          <div className="flex flex-col">
-                            <span className="text-xs mb-1">{progress.scheduled}/{progress.total} ({progress.percentage}%)</span>
-                            <Progress value={progress.percentage} className="h-2" />
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => startEdit(course)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteCourse(course.id)}>
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                  {filteredCourses.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                        No courses found for this track.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredCourses.map(course => {
+                      const progress = getSessionProgress(course);
+                      return (
+                        <TableRow key={course.id}>
+                          <TableCell className="font-medium">{course.courseCode}</TableCell>
+                          <TableCell>{course.title}</TableCell>
+                          <TableCell>{tracks.find(t => t.id === course.trackId)?.name}</TableCell>
+                          <TableCell>{course.category}</TableCell>
+                          <TableCell>{course.term}</TableCell>
+                          <TableCell>{course.lectureHours}/{course.labHours}/{course.selfStudyHours}</TableCell>
+                          <TableCell>{course.totalHours}</TableCell>
+                          <TableCell>{course.numberOfSessions}</TableCell>
+                          <TableCell className={getStatusColor(course.status)}>
+                            {course.status.replace('-', ' ')}
+                          </TableCell>
+                          <TableCell className="w-40">
+                            <div className="flex flex-col">
+                              <span className="text-xs mb-1">{progress.scheduled}/{progress.total} ({progress.percentage}%)</span>
+                              <Progress value={progress.percentage} className="h-2" />
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => startEdit(course)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteCourse(course.id)}>
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
                 </TableBody>
               </Table>
             </div>
