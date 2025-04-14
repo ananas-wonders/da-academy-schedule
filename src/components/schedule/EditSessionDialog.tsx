@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Check, Search, MessageCircle, AlertCircle } from 'lucide-react';
+import { Trash2, Check, Search, MessageCircle, AlertCircle } from 'lucide-react';
 import { Session } from '@/types/schedule';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,7 @@ import { useSessionOverlap } from '@/hooks/useSessionOverlap';
 interface EditSessionDialogProps {
   session: Session | null;
   onSave: (updatedSession: Session) => void;
+  onDelete?: (sessionId: string) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   allSessions: Session[];
@@ -24,6 +25,7 @@ interface EditSessionDialogProps {
 const EditSessionDialog: React.FC<EditSessionDialogProps> = ({ 
   session, 
   onSave, 
+  onDelete,
   open, 
   onOpenChange,
   allSessions
@@ -105,6 +107,13 @@ const EditSessionDialog: React.FC<EditSessionDialogProps> = ({
     
     onSave(editedSession);
     onOpenChange(false);
+  };
+
+  const handleDelete = () => {
+    if (onDelete && editedSession.id) {
+      onDelete(editedSession.id);
+      onOpenChange(false);
+    }
   };
 
   return (
@@ -287,6 +296,27 @@ const EditSessionDialog: React.FC<EditSessionDialogProps> = ({
             </div>
           )}
           
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-count">Current Count</Label>
+              <Input
+                id="edit-count"
+                type="number"
+                value={editedSession.count || 0}
+                onChange={(e) => handleChange('count', parseInt(e.target.value) || 0)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-total">Total Sessions</Label>
+              <Input
+                id="edit-total"
+                type="number"
+                value={editedSession.total || 0}
+                onChange={(e) => handleChange('total', parseInt(e.target.value) || 0)}
+              />
+            </div>
+          </div>
+          
           {hasOverlap && (
             <Alert variant="destructive" className="mt-4">
               <AlertCircle className="h-4 w-4" />
@@ -297,15 +327,28 @@ const EditSessionDialog: React.FC<EditSessionDialogProps> = ({
             </Alert>
           )}
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+        <DialogFooter className="flex justify-between">
           <Button 
-            onClick={handleSave} 
-            disabled={hasOverlap}
-            variant={hasOverlap ? "outline" : "default"}
+            variant="destructive" 
+            onClick={handleDelete}
+            type="button"
+            className="flex items-center"
           >
-            Save Changes
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete Session
           </Button>
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button 
+              onClick={handleSave} 
+              disabled={hasOverlap}
+              variant={hasOverlap ? "outline" : "default"}
+              className="flex items-center"
+            >
+              <Check className="mr-2 h-4 w-4" />
+              Save Changes
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

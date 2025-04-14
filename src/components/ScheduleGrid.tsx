@@ -337,8 +337,8 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
           time: newSession.time,
           custom_start_time: newSession.customStartTime,
           custom_end_time: newSession.customEndTime,
-          count: newSession.count,
-          total: newSession.total
+          count: newSession.count || 0,
+          total: newSession.total || 0
         }]);
         
       if (error) throw error;
@@ -378,8 +378,8 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
           time: updatedSession.time,
           custom_start_time: updatedSession.customStartTime,
           custom_end_time: updatedSession.customEndTime,
-          count: updatedSession.count,
-          total: updatedSession.total
+          count: updatedSession.count || 0,
+          total: updatedSession.total || 0
         })
         .eq('id', updatedSession.id);
         
@@ -399,6 +399,31 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         variant: "destructive",
         title: "Error updating session",
         description: "Failed to update session"
+      });
+    }
+  }, [sessions, toast]);
+
+  const handleDeleteSession = useCallback(async (sessionId: string) => {
+    try {
+      const { error } = await supabase
+        .from('sessions')
+        .delete()
+        .eq('id', sessionId);
+        
+      if (error) throw error;
+      
+      setSessions(sessions.filter(session => session.id !== sessionId));
+      
+      toast({
+        title: "Session deleted",
+        description: "Session has been removed from the schedule"
+      });
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      toast({
+        variant: "destructive",
+        title: "Error deleting session",
+        description: "Failed to delete session"
       });
     }
   }, [sessions, toast]);
@@ -479,6 +504,7 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
       <EditSessionDialog 
         session={editingSession}
         onSave={handleSaveEditedSession}
+        onDelete={handleDeleteSession}
         open={sessionDialogOpen}
         onOpenChange={setSessionDialogOpen}
         allSessions={sessions}

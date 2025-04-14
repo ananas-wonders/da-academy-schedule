@@ -101,5 +101,11 @@ export const useSessionOverlap = (sessions: Session[]) => {
     );
   }, [sessions, getSessionTimeSlot, doTimeSlotsOverlap]);
   
-  return { checkSessionOverlap };
+  return { 
+    checkSessionOverlap,
+    doTimeSlotsOverlap,
+    getSessionTimeSlot,
+    parseTimeToMinutes,
+    parseTimeRange
+  };
 };

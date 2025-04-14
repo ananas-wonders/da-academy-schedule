@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { isSameDay } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -11,6 +11,7 @@ import SortableTrack from './SortableTrack';
 import SessionCard from '@/components/SessionCard';
 import AddSessionForm from '@/components/AddSessionForm';
 import { SessionCardProps } from '@/components/SessionCard';
+import { useAvailableTimeSlots } from '@/hooks/useAvailableTimeSlots';
 
 interface ScheduleGridTableProps {
   days: Day[];
@@ -44,6 +45,15 @@ const ScheduleGridTable: React.FC<ScheduleGridTableProps> = ({
   getTrackGroup
 }) => {
   const trackIds = visibleTracks.map(track => track.id);
+  const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+  
+  const { getOccupiedTimeSlots } = useAvailableTimeSlots(sessions);
+
+  const handleOpenAddSession = (dayId: string, trackId: string) => {
+    setSelectedDayId(dayId);
+    setSelectedTrackId(trackId);
+  };
 
   return (
     <table className="min-w-full border-collapse">
@@ -129,6 +139,7 @@ const ScheduleGridTable: React.FC<ScheduleGridTableProps> = ({
                         variant="ghost" 
                         size="sm" 
                         className="w-full justify-center text-gray-400 hover:text-gray-700"
+                        onClick={() => handleOpenAddSession(day.id, track.id)}
                       >
                         <Plus className="h-4 w-4" />
                         <span className="ml-1 text-xs">Add Session</span>
@@ -137,6 +148,9 @@ const ScheduleGridTable: React.FC<ScheduleGridTableProps> = ({
                     <PopoverContent className="w-72" align="center">
                       <AddSessionForm 
                         onSubmit={(sessionData) => onAddSession(day.id, track.id, sessionData)}
+                        occupiedTimeSlots={selectedDayId === day.id && selectedTrackId === track.id 
+                          ? getOccupiedTimeSlots(day.id, track.id) 
+                          : []}
                       />
                     </PopoverContent>
                   </Popover>

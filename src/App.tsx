@@ -8,10 +8,12 @@ import Auth from './pages/Auth';
 import InstructorDetails from './pages/InstructorDetails';
 import CourseLists from './pages/CourseLists';
 import Tracks from './pages/Tracks';
+import Header from './components/Header';
 
 function App() {
   return (
     <Router>
+      <Header />
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/admin" element={<Admin />} />
