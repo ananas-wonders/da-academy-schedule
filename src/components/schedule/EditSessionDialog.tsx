@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Check, Search, MessageCircle } from 'lucide-react';
+import { Check, Search, MessageCircle, AlertCircle } from 'lucide-react';
 import { Session } from '@/types/schedule';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -10,19 +10,23 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { SessionType, SessionTime } from '@/components/SessionCard';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useSessionOverlap } from '@/hooks/useSessionOverlap';
 
 interface EditSessionDialogProps {
   session: Session | null;
   onSave: (updatedSession: Session) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  allSessions: Session[];
 }
 
 const EditSessionDialog: React.FC<EditSessionDialogProps> = ({ 
   session, 
   onSave, 
   open, 
-  onOpenChange 
+  onOpenChange,
+  allSessions
 }) => {
   const [editedSession, setEditedSession] = useState<Session | null>(null);
   const [courseSearchValue, setCourseSearchValue] = useState('');
@@ -31,6 +35,9 @@ const EditSessionDialog: React.FC<EditSessionDialogProps> = ({
   const [isOpenInstructors, setIsOpenInstructors] = useState(false);
   const [courseOptions, setCourseOptions] = useState<{ id: string, title: string }[]>([]);
   const [instructorOptions, setInstructorOptions] = useState<{ id: string, name: string, phone?: string }[]>([]);
+  const [hasOverlap, setHasOverlap] = useState(false);
+  
+  const { checkSessionOverlap } = useSessionOverlap(allSessions || []);
 
   useEffect(() => {
     const loadData = () => {
@@ -54,23 +61,55 @@ const EditSessionDialog: React.FC<EditSessionDialogProps> = ({
   useEffect(() => {
     if (session) {
       setEditedSession({ ...session });
+      
+      // Check for overlaps immediately when editing an existing session
+      if (allSessions && allSessions.length > 0) {
+        const hasTimeConflict = checkSessionOverlap(session, session.id);
+        setHasOverlap(hasTimeConflict);
+      }
     }
-  }, [session]);
+  }, [session, allSessions, checkSessionOverlap]);
+
+  const checkForOverlaps = (updatedSession: Session) => {
+    if (!allSessions || allSessions.length === 0) return false;
+    
+    const hasTimeConflict = checkSessionOverlap(
+      updatedSession, 
+      session ? session.id : undefined
+    );
+    
+    setHasOverlap(hasTimeConflict);
+    return hasTimeConflict;
+  };
 
   if (!editedSession) return null;
 
   const handleChange = (field: keyof Session, value: any) => {
-    setEditedSession(prev => ({ ...prev!, [field]: value }));
+    const updatedSession = { ...editedSession, [field]: value };
+    setEditedSession(updatedSession);
+    
+    // Check for overlaps when changing instructor or time
+    if (field === 'instructor' || field === 'time' || field === 'customStartTime' || field === 'customEndTime') {
+      checkForOverlaps(updatedSession);
+    }
   };
 
   const handleSave = () => {
+    // Final overlap check before saving
+    const hasConflict = checkForOverlaps(editedSession);
+    
+    if (hasConflict) {
+      // Don't save if there's an overlap
+      return;
+    }
+    
     onSave(editedSession);
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Edit Session</DialogTitle>
         </DialogHeader>
@@ -247,10 +286,26 @@ const EditSessionDialog: React.FC<EditSessionDialogProps> = ({
               </div>
             </div>
           )}
+          
+          {hasOverlap && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                This instructor already has a session scheduled at this time. 
+                Please select a different time or instructor.
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave}>Save Changes</Button>
+          <Button 
+            onClick={handleSave} 
+            disabled={hasOverlap}
+            variant={hasOverlap ? "outline" : "default"}
+          >
+            Save Changes
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

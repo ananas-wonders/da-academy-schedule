@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Edit } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Instructor } from '@/types/instructor';
 
 interface InstructorFormDialogProps {
@@ -77,8 +78,8 @@ const InstructorFormDialog: React.FC<InstructorFormDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[95vw] md:max-w-[600px] max-h-[90vh] overflow-hidden p-0">
+        <DialogHeader className="px-6 pt-6">
           <DialogTitle>{instructor ? 'Edit Instructor' : 'Add New Instructor'}</DialogTitle>
           <DialogDescription>
             {instructor 
@@ -86,114 +87,125 @@ const InstructorFormDialog: React.FC<InstructorFormDialogProps> = ({
               : 'Fill in the instructor details below to add to the database.'}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="flex justify-center mb-4">
-            <div className="relative">
-              <Avatar className="h-24 w-24">
-                <AvatarImage 
-                  src={formData.imageUrl || ''} 
-                  alt="Instructor photo" 
+        
+        <ScrollArea className="max-h-[calc(90vh-140px)]">
+          <div className="space-y-4 px-6 py-4">
+            <div className="flex justify-center mb-4">
+              <div className="relative">
+                <Avatar className="h-24 w-24">
+                  <AvatarImage 
+                    src={formData.imageUrl || ''} 
+                    alt="Instructor photo" 
+                  />
+                  <AvatarFallback>
+                    {formData.name 
+                      ? formData.name.substring(0, 2).toUpperCase() 
+                      : 'IN'}
+                  </AvatarFallback>
+                </Avatar>
+                <label 
+                  htmlFor="photo-upload" 
+                  className="absolute bottom-0 right-0 bg-primary text-white p-1 rounded-full cursor-pointer"
+                >
+                  <Edit className="h-3.5 w-3.5" />
+                </label>
+                <input 
+                  id="photo-upload" 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleImageUpload}
                 />
-                <AvatarFallback>
-                  {formData.name 
-                    ? formData.name.substring(0, 2).toUpperCase() 
-                    : 'IN'}
-                </AvatarFallback>
-              </Avatar>
-              <label 
-                htmlFor="photo-upload" 
-                className="absolute bottom-0 right-0 bg-primary text-white p-1 rounded-full cursor-pointer"
-              >
-                <Edit className="h-3.5 w-3.5" />
-              </label>
-              <input 
-                id="photo-upload" 
-                type="file" 
-                accept="image/*" 
-                className="hidden" 
-                onChange={handleImageUpload}
+              </div>
+            </div>
+            
+            {/* Responsive form layout with grid for larger screens */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input 
+                  id="name" 
+                  value={formData.name || ''} 
+                  onChange={(e) => handleChange('name', e.target.value)} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input 
+                  id="email" 
+                  type="email"
+                  value={formData.email || ''} 
+                  onChange={(e) => handleChange('email', e.target.value)} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input 
+                  id="phone" 
+                  value={formData.phone || ''} 
+                  onChange={(e) => handleChange('phone', e.target.value)} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="subject">Subject</Label>
+                <Input 
+                  id="subject" 
+                  value={formData.subject || ''} 
+                  onChange={(e) => handleChange('subject', e.target.value)} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="company">Company</Label>
+                <Input 
+                  id="company" 
+                  value={formData.company || ''} 
+                  onChange={(e) => handleChange('company', e.target.value)} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="specialization">Specializations</Label>
+                <div className="flex space-x-2">
+                  <Input 
+                    id="specialization"
+                    value={newSpecialization}
+                    onChange={(e) => setNewSpecialization(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSpecialization())}
+                    placeholder="Add specialization"
+                  />
+                  <Button type="button" onClick={addSpecialization} size="sm">Add</Button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-2 mt-2">
+                {(formData.specialization || []).map((spec, index) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    {spec}
+                    <button 
+                      onClick={() => removeSpecialization(spec)}
+                      className="ml-1 rounded-full hover:bg-gray-300 p-1 h-4 w-4 flex items-center justify-center"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea 
+                id="notes" 
+                rows={3}
+                value={formData.notes || ''} 
+                onChange={(e) => handleChange('notes', e.target.value)} 
               />
             </div>
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input 
-              id="name" 
-              value={formData.name || ''} 
-              onChange={(e) => handleChange('name', e.target.value)} 
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input 
-              id="email" 
-              type="email"
-              value={formData.email || ''} 
-              onChange={(e) => handleChange('email', e.target.value)} 
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
-            <Input 
-              id="phone" 
-              value={formData.phone || ''} 
-              onChange={(e) => handleChange('phone', e.target.value)} 
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="subject">Subject</Label>
-            <Input 
-              id="subject" 
-              value={formData.subject || ''} 
-              onChange={(e) => handleChange('subject', e.target.value)} 
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="company">Company</Label>
-            <Input 
-              id="company" 
-              value={formData.company || ''} 
-              onChange={(e) => handleChange('company', e.target.value)} 
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="specialization">Specializations</Label>
-            <div className="flex space-x-2">
-              <Input 
-                id="specialization"
-                value={newSpecialization}
-                onChange={(e) => setNewSpecialization(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSpecialization())}
-                placeholder="Add specialization"
-              />
-              <Button type="button" onClick={addSpecialization}>Add</Button>
-            </div>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {(formData.specialization || []).map((spec, index) => (
-                <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                  {spec}
-                  <button 
-                    onClick={() => removeSpecialization(spec)}
-                    className="ml-1 rounded-full hover:bg-gray-300 p-1 h-4 w-4 flex items-center justify-center"
-                  >
-                    ×
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea 
-              id="notes" 
-              rows={4}
-              value={formData.notes || ''} 
-              onChange={(e) => handleChange('notes', e.target.value)} 
-            />
-          </div>
-        </div>
-        <DialogFooter>
+        </ScrollArea>
+        
+        <DialogFooter className="px-6 py-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSubmit}>
             {instructor ? 'Save Changes' : 'Add Instructor'}

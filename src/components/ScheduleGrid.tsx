@@ -41,16 +41,9 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
   );
 
   useEffect(() => {
-    // Set days from props
     setDays(initialDays);
-    
-    // Set tracks from props
     setTracks(initialTracks);
-    
-    // Set sessions from props
     setSessions(initialSessions);
-    
-    // Fetch track groups
     fetchTrackGroups();
   }, [initialDays, initialTracks, initialSessions]);
 
@@ -73,7 +66,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     }
   }, []);
 
-  // Memoize visibleTracks calculation to prevent unnecessary recalculations
   const visibleTracks = useMemo(() => {
     return tracks.filter(track => {
       if (!track.groupId) return track.visible !== false;
@@ -88,7 +80,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     ).slice(0, 5);
   }, [sessions]);
 
-  // Memoize hasConflict function to prevent unnecessary calculations
   const hasConflict = useCallback((session: Session) => {
     return sessions.some(s => 
       s.id !== session.id && 
@@ -119,7 +110,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
 
   const handleEditTrackName = useCallback(async (id: string, newName: string) => {
     try {
-      // Update in database
       const { error } = await supabase
         .from('tracks')
         .update({ name: newName })
@@ -127,7 +117,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         
       if (error) throw error;
       
-      // Update local state
       setTracks(tracks.map(track => 
         track.id === id ? { ...track, name: newName } : track
       ));
@@ -151,14 +140,12 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
       const newId = `track-${Date.now()}`;
       const newName = `New Track ${tracks.length + 1}`;
       
-      // Add to database
       const { error } = await supabase
         .from('tracks')
         .insert([{ id: newId, name: newName, visible: true }]);
         
       if (error) throw error;
       
-      // Update local state
       setTracks([...tracks, { id: newId, name: newName, visible: true }]);
       
       toast({
@@ -187,14 +174,12 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         visible: true
       };
       
-      // Add group to database
       const { error: groupError } = await supabase
         .from('track_groups')
         .insert([newGroup]);
         
       if (groupError) throw groupError;
       
-      // Update tracks with group assignment
       for (const trackId of selectedTracks) {
         const { error: trackError } = await supabase
           .from('tracks')
@@ -204,7 +189,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         if (trackError) throw trackError;
       }
       
-      // Update local state
       setGroups([...groups, newGroup]);
       
       setTracks(tracks.map(track => 
@@ -216,7 +200,7 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
       
       toast({
         title: "Track group created",
-        description: `"${newGroupName}" group has been created with the selected tracks`,
+        description: `"${newGroupName}" group has been created with the selected tracks",
       });
     } catch (error) {
       console.error('Error creating group:', error);
@@ -230,7 +214,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
 
   const handleUpdateGroups = async (updatedGroups: TrackGroup[]) => {
     try {
-      // Update each group in the database
       for (const group of updatedGroups) {
         const { error } = await supabase
           .from('track_groups')
@@ -244,7 +227,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         if (error) throw error;
       }
       
-      // Update local state
       setGroups(updatedGroups);
       
       toast({
@@ -263,7 +245,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
 
   const handleToggleGroupVisibility = useCallback(async (groupId: string, visible: boolean) => {
     try {
-      // Update in database
       const { error } = await supabase
         .from('track_groups')
         .update({ visible })
@@ -271,7 +252,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         
       if (error) throw error;
       
-      // Update local state
       setGroups(groups.map(group => 
         group.id === groupId ? { ...group, visible } : group
       ));
@@ -292,7 +272,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
 
   const handleToggleTrackVisibility = useCallback(async (trackId: string, visible: boolean) => {
     try {
-      // Update in database
       const { error } = await supabase
         .from('tracks')
         .update({ visible })
@@ -300,7 +279,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         
       if (error) throw error;
       
-      // Update local state
       setTracks(tracks.map(track => 
         track.id === trackId ? { ...track, visible } : track
       ));
@@ -346,7 +324,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         ...newSession
       };
       
-      // Add to database
       const { error } = await supabase
         .from('sessions')
         .insert([{
@@ -365,7 +342,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         
       if (error) throw error;
       
-      // Update local state
       setSessions([...sessions, session]);
       
       toast({
@@ -392,7 +368,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
 
   const handleSaveEditedSession = useCallback(async (updatedSession: Session) => {
     try {
-      // Update in database
       const { error } = await supabase
         .from('sessions')
         .update({
@@ -409,7 +384,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         
       if (error) throw error;
       
-      // Update local state
       setSessions(sessions.map(session => 
         session.id === updatedSession.id ? updatedSession : session
       ));
@@ -506,6 +480,7 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         onSave={handleSaveEditedSession}
         open={sessionDialogOpen}
         onOpenChange={setSessionDialogOpen}
+        allSessions={sessions}
       />
     </div>
   );
