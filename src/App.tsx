@@ -13,17 +13,21 @@ import Header from './components/Header';
 function App() {
   return (
     <Router>
-      <Header />
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/admin" element={<Admin />} />
-        <Route path="/track/:id" element={<TrackView />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/instructors" element={<InstructorDetails />} />
-        <Route path="/courses" element={<CourseLists />} />
-        <Route path="/tracks" element={<Tracks />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <div className="flex flex-col min-h-screen">
+        <Header />
+        <main className="flex-1">
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/track/:id" element={<TrackView />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/instructors" element={<InstructorDetails />} />
+            <Route path="/courses" element={<CourseLists />} />
+            <Route path="/tracks" element={<Tracks />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+      </div>
     </Router>
   );
 }

@@ -5,14 +5,16 @@ import { Input } from '@/components/ui/input';
 import { SessionCardProps, SessionType, SessionTime } from './SessionCard';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
 import { MessageCircle, Search } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { TimeSlot } from '@/hooks/useSessionOverlap';
+import { Badge } from "@/components/ui/badge";
 
 interface AddSessionFormProps {
   onSubmit: (sessionData: Omit<SessionCardProps, 'id'>) => void;
+  occupiedTimeSlots?: TimeSlot[];
 }
 
 interface Course {
@@ -49,7 +51,7 @@ const fetchInstructors = async (): Promise<Instructor[]> => {
   });
 };
 
-const AddSessionForm: React.FC<AddSessionFormProps> = ({ onSubmit }) => {
+const AddSessionForm: React.FC<AddSessionFormProps> = ({ onSubmit, occupiedTimeSlots = [] }) => {
   const [courseId, setCourseId] = useState('');
   const [instructorId, setInstructorId] = useState('');
   const [type, setType] = useState<SessionType>('online');
@@ -74,6 +76,21 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ onSubmit }) => {
   
   const selectedCourse = courses.find(course => course.id === courseId);
   const selectedInstructor = instructors.find(instructor => instructor.id === instructorId);
+
+  // Check if a time slot is occupied
+  const isTimeSlotOccupied = (timeValue: string): boolean => {
+    if (!occupiedTimeSlots || occupiedTimeSlots.length === 0) return false;
+    
+    if (timeValue === 'custom') {
+      // For custom time slots, we'll check this separately
+      return false;
+    }
+    
+    return occupiedTimeSlots.some(slot => {
+      const slotString = `${slot.startTime}-${slot.endTime}`;
+      return slotString === timeValue;
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -223,18 +240,29 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ onSubmit }) => {
           onValueChange={(value) => value && setTime(value as SessionTime)}
           className="flex flex-wrap justify-start gap-2"
         >
-          <ToggleGroupItem value="9am-12pm" aria-label="Morning" className="rounded-full">
-            9am - 12pm
-          </ToggleGroupItem>
-          <ToggleGroupItem value="1pm-3:45pm" aria-label="Afternoon" className="rounded-full">
-            1pm - 3:45pm
-          </ToggleGroupItem>
-          <ToggleGroupItem value="4pm-6:45pm" aria-label="Evening" className="rounded-full">
-            4pm - 6:45pm
-          </ToggleGroupItem>
-          <ToggleGroupItem value="custom" aria-label="Custom" className="rounded-full">
-            Custom
-          </ToggleGroupItem>
+          {["9am-12pm", "1pm-3:45pm", "4pm-6:45pm", "custom"].map((timeValue) => {
+            const occupied = isTimeSlotOccupied(timeValue);
+            const displayText = timeValue === "custom" ? "Custom" : timeValue;
+            
+            return (
+              <ToggleGroupItem 
+                key={timeValue}
+                value={timeValue} 
+                aria-label={displayText} 
+                className="rounded-full relative"
+                disabled={occupied}
+              >
+                <span className={occupied ? "text-gray-400" : ""}>
+                  {displayText}
+                </span>
+                {occupied && (
+                  <Badge variant="secondary" className="absolute -top-2 -right-2 text-xs bg-gray-200">
+                    Occupied
+                  </Badge>
+                )}
+              </ToggleGroupItem>
+            );
+          })}
         </ToggleGroup>
       </div>
       
