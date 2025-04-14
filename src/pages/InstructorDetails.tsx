@@ -1,27 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Edit, Trash, Plus, Search, MessageCircle } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-
-type Instructor = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  subject: string;
-  company: string;
-  notes: string;
-  specialization: string[];
-  imageUrl?: string;
-};
+import { Plus, Search } from 'lucide-react';
+import { Instructor } from '@/types/instructor';
+import InstructorCard from '@/components/instructor/InstructorCard';
+import InstructorTable from '@/components/instructor/InstructorTable';
+import InstructorFormDialog from '@/components/instructor/InstructorFormDialog';
+import { useToast } from '@/hooks/use-toast';
 
 const initialInstructors: Instructor[] = [
   { 
@@ -70,7 +56,7 @@ const initialInstructors: Instructor[] = [
   },
 ];
 
-const InstructorDetails = () => {
+const InstructorDetails: React.FC = () => {
   const [instructors, setInstructors] = useState<Instructor[]>(() => {
     const savedInstructors = localStorage.getItem('instructors');
     return savedInstructors ? JSON.parse(savedInstructors) : initialInstructors;
@@ -79,126 +65,86 @@ const InstructorDetails = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
   const [editInstructor, setEditInstructor] = useState<Instructor | null>(null);
-  const [newInstructor, setNewInstructor] = useState<Omit<Instructor, 'id'>>({
-    name: '',
-    email: '',
-    phone: '',
-    subject: '',
-    company: '',
-    notes: '',
-    specialization: [],
-    imageUrl: ''
-  });
-  const [newSpecialization, setNewSpecialization] = useState('');
+  const { toast } = useToast();
 
+  // Save instructors to localStorage when they change
   React.useEffect(() => {
     localStorage.setItem('instructors', JSON.stringify(instructors));
   }, [instructors]);
 
-  const filteredInstructors = instructors.filter(instructor => 
+  // Memoize filtered instructors for performance
+  const filteredInstructors = useMemo(() => instructors.filter(instructor => 
     instructor.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     instructor.specialization.some(spec => spec.toLowerCase().includes(searchQuery.toLowerCase())) ||
     instructor.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
     instructor.company.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ), [instructors, searchQuery]);
 
-  const handleAddInstructor = () => {
-    const newInstructorWithId = {
+  const handleAddInstructor = useCallback((newInstructor: Partial<Instructor>) => {
+    const instructorWithId = {
       ...newInstructor,
       id: `instructor-${Date.now()}`
-    };
-    setInstructors([...instructors, newInstructorWithId]);
-    setDialogOpen(false);
-    resetForm();
-  };
+    } as Instructor;
+    
+    setInstructors(prev => [...prev, instructorWithId]);
+    toast({
+      title: "Instructor Added",
+      description: `${newInstructor.name} has been added successfully.`,
+    });
+  }, [toast]);
 
-  const handleEditInstructor = () => {
+  const handleEditInstructor = useCallback((updatedInstructor: Partial<Instructor>) => {
     if (!editInstructor) return;
     
-    setInstructors(instructors.map(instructor => 
-      instructor.id === editInstructor.id ? editInstructor : instructor
+    setInstructors(prev => prev.map(instructor => 
+      instructor.id === editInstructor.id 
+        ? { ...instructor, ...updatedInstructor } 
+        : instructor
     ));
-    setDialogOpen(false);
-    setEditInstructor(null);
-  };
-
-  const handleDeleteInstructor = (id: string) => {
-    setInstructors(instructors.filter(instructor => instructor.id !== id));
-  };
-
-  const resetForm = () => {
-    setNewInstructor({
-      name: '',
-      email: '',
-      phone: '',
-      subject: '',
-      company: '',
-      notes: '',
-      specialization: [],
-      imageUrl: ''
+    
+    toast({
+      title: "Instructor Updated",
+      description: `${updatedInstructor.name} has been updated successfully.`,
     });
-  };
+    
+    setEditInstructor(null);
+  }, [editInstructor, toast]);
 
-  const startEdit = (instructor: Instructor) => {
+  const handleDeleteInstructor = useCallback((id: string) => {
+    const instructorToDelete = instructors.find(i => i.id === id);
+    
+    setInstructors(prev => prev.filter(instructor => instructor.id !== id));
+    
+    toast({
+      title: "Instructor Removed",
+      description: `${instructorToDelete?.name} has been removed.`,
+      variant: "destructive",
+    });
+  }, [instructors, toast]);
+
+  const startEdit = useCallback((instructor: Instructor) => {
     setEditInstructor(instructor);
     setDialogOpen(true);
-  };
+  }, []);
 
-  const handleNewInstructorChange = (field: string, value: string | string[]) => {
-    setNewInstructor(prev => ({ ...prev, [field]: value }));
-  };
+  const handleOpenDialog = useCallback(() => {
+    setEditInstructor(null);
+    setDialogOpen(true);
+  }, []);
 
-  const handleEditInstructorChange = (field: string, value: string | string[]) => {
-    if (!editInstructor) return;
-    setEditInstructor({ ...editInstructor, [field]: value });
-  };
-
-  const addSpecialization = () => {
-    if (!newSpecialization.trim()) return;
-    
+  const handleSaveInstructor = useCallback((instructor: Partial<Instructor>) => {
     if (editInstructor) {
-      handleEditInstructorChange('specialization', [...editInstructor.specialization, newSpecialization]);
+      handleEditInstructor(instructor);
     } else {
-      handleNewInstructorChange('specialization', [...newInstructor.specialization, newSpecialization]);
+      handleAddInstructor(instructor);
     }
-    setNewSpecialization('');
-  };
-
-  const removeSpecialization = (specialization: string) => {
-    if (editInstructor) {
-      handleEditInstructorChange(
-        'specialization', 
-        editInstructor.specialization.filter(s => s !== specialization)
-      );
-    } else {
-      handleNewInstructorChange(
-        'specialization', 
-        newInstructor.specialization.filter(s => s !== specialization)
-      );
-    }
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isEdit: boolean) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const imageUrl = reader.result as string;
-      if (isEdit && editInstructor) {
-        handleEditInstructorChange('imageUrl', imageUrl);
-      } else {
-        handleNewInstructorChange('imageUrl', imageUrl);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
+  }, [editInstructor, handleAddInstructor, handleEditInstructor]);
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className="container mx-auto py-8 px-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-3xl font-bold">Instructor Details</h1>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 w-full sm:w-auto">
           <div className="flex gap-2">
             <Button 
               variant={viewMode === 'cards' ? "default" : "outline"} 
@@ -215,157 +161,9 @@ const InstructorDetails = () => {
               Table
             </Button>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => {
-                setEditInstructor(null);
-                resetForm();
-              }}>
-                <Plus className="mr-2 h-4 w-4" /> Add New Instructor
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>{editInstructor ? 'Edit Instructor' : 'Add New Instructor'}</DialogTitle>
-                <DialogDescription>
-                  {editInstructor 
-                    ? 'Edit instructor details below'
-                    : 'Fill in the instructor details below to add to the database.'}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="flex justify-center mb-4">
-                  <div className="relative">
-                    <Avatar className="h-24 w-24">
-                      <AvatarImage 
-                        src={editInstructor?.imageUrl || newInstructor.imageUrl || ''} 
-                        alt="Instructor photo" 
-                      />
-                      <AvatarFallback>
-                        {editInstructor 
-                          ? editInstructor.name.substring(0, 2).toUpperCase() 
-                          : (newInstructor.name ? newInstructor.name.substring(0, 2).toUpperCase() : 'IN')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <label 
-                      htmlFor="photo-upload" 
-                      className="absolute bottom-0 right-0 bg-primary text-white p-1 rounded-full cursor-pointer"
-                    >
-                      <Edit className="h-3.5 w-3.5" />
-                    </label>
-                    <input 
-                      id="photo-upload" 
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={(e) => handleImageUpload(e, !!editInstructor)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input 
-                    id="name" 
-                    value={editInstructor ? editInstructor.name : newInstructor.name} 
-                    onChange={(e) => editInstructor 
-                      ? handleEditInstructorChange('name', e.target.value) 
-                      : handleNewInstructorChange('name', e.target.value)
-                    } 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input 
-                    id="email" 
-                    type="email"
-                    value={editInstructor ? editInstructor.email : newInstructor.email} 
-                    onChange={(e) => editInstructor 
-                      ? handleEditInstructorChange('email', e.target.value) 
-                      : handleNewInstructorChange('email', e.target.value)
-                    } 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input 
-                    id="phone" 
-                    value={editInstructor ? editInstructor.phone : newInstructor.phone} 
-                    onChange={(e) => editInstructor 
-                      ? handleEditInstructorChange('phone', e.target.value) 
-                      : handleNewInstructorChange('phone', e.target.value)
-                    } 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subject">Subject</Label>
-                  <Input 
-                    id="subject" 
-                    value={editInstructor ? editInstructor.subject : newInstructor.subject} 
-                    onChange={(e) => editInstructor 
-                      ? handleEditInstructorChange('subject', e.target.value) 
-                      : handleNewInstructorChange('subject', e.target.value)
-                    } 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="company">Company</Label>
-                  <Input 
-                    id="company" 
-                    value={editInstructor ? editInstructor.company : newInstructor.company} 
-                    onChange={(e) => editInstructor 
-                      ? handleEditInstructorChange('company', e.target.value) 
-                      : handleNewInstructorChange('company', e.target.value)
-                    } 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="specialization">Specializations</Label>
-                  <div className="flex space-x-2">
-                    <Input 
-                      id="specialization"
-                      value={newSpecialization}
-                      onChange={(e) => setNewSpecialization(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSpecialization())}
-                      placeholder="Add specialization"
-                    />
-                    <Button type="button" onClick={addSpecialization}>Add</Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {(editInstructor ? editInstructor.specialization : newInstructor.specialization).map((spec, index) => (
-                      <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                        {spec}
-                        <button 
-                          onClick={() => removeSpecialization(spec)}
-                          className="ml-1 rounded-full hover:bg-gray-300 p-1 h-4 w-4 flex items-center justify-center"
-                        >
-                          ×
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea 
-                    id="notes" 
-                    rows={4}
-                    value={editInstructor ? editInstructor.notes : newInstructor.notes} 
-                    onChange={(e) => editInstructor 
-                      ? handleEditInstructorChange('notes', e.target.value) 
-                      : handleNewInstructorChange('notes', e.target.value)
-                    } 
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-                <Button onClick={editInstructor ? handleEditInstructor : handleAddInstructor}>
-                  {editInstructor ? 'Save Changes' : 'Add Instructor'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button onClick={handleOpenDialog}>
+            <Plus className="mr-2 h-4 w-4" /> Add New Instructor
+          </Button>
         </div>
       </div>
       
@@ -385,141 +183,28 @@ const InstructorDetails = () => {
       {viewMode === 'cards' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredInstructors.map(instructor => (
-            <Card key={instructor.id}>
-              <CardHeader className="flex flex-row items-center gap-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={instructor.imageUrl} alt={instructor.name} />
-                  <AvatarFallback>{instructor.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <div className="flex justify-between items-center w-full">
-                  <div>
-                    <CardTitle className="text-xl">{instructor.name}</CardTitle>
-                    <p className="text-sm text-gray-500">{instructor.email}</p>
-                  </div>
-                  {instructor.phone && (
-                    <a 
-                      href={`https://api.whatsapp.com/send?phone=${instructor.phone.replace(/\D/g, '')}`}
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-green-500 hover:text-green-700"
-                    >
-                      <MessageCircle className="h-5 w-5" />
-                    </a>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-medium">Phone:</p>
-                    <p className="text-sm">{instructor.phone}</p>
-                  </div>
-                  
-                  <div>
-                    <p className="text-sm font-medium">Subject:</p>
-                    <p className="text-sm">{instructor.subject}</p>
-                  </div>
-                  
-                  <div>
-                    <p className="text-sm font-medium">Company:</p>
-                    <p className="text-sm">{instructor.company}</p>
-                  </div>
-                  
-                  <div>
-                    <p className="text-sm font-medium mb-1">Specializations:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {instructor.specialization.map((spec, index) => (
-                        <Badge key={index} variant="secondary">{spec}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {instructor.notes && (
-                    <div>
-                      <p className="text-sm font-medium">Notes:</p>
-                      <p className="text-sm italic">{instructor.notes}</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-end space-x-2">
-                <Button variant="outline" size="sm" onClick={() => startEdit(instructor)}>
-                  <Edit className="h-4 w-4 mr-1" /> Edit
-                </Button>
-                <Button variant="destructive" size="sm" onClick={() => handleDeleteInstructor(instructor.id)}>
-                  <Trash className="h-4 w-4 mr-1" /> Delete
-                </Button>
-              </CardFooter>
-            </Card>
+            <InstructorCard 
+              key={instructor.id}
+              instructor={instructor}
+              onEdit={startEdit}
+              onDelete={handleDeleteInstructor}
+            />
           ))}
         </div>
       ) : (
-        <div className="rounded-md border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Subject</TableHead>
-                <TableHead>Company</TableHead>
-                <TableHead>Specializations</TableHead>
-                <TableHead>Notes</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredInstructors.map(instructor => (
-                <TableRow key={instructor.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={instructor.imageUrl} alt={instructor.name} />
-                        <AvatarFallback>{instructor.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      {instructor.name}
-                    </div>
-                  </TableCell>
-                  <TableCell>{instructor.email}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      {instructor.phone}
-                      {instructor.phone && (
-                        <a 
-                          href={`https://api.whatsapp.com/send?phone=${instructor.phone.replace(/\D/g, '')}`}
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="ml-2 text-green-500 hover:text-green-700"
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                        </a>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{instructor.subject}</TableCell>
-                  <TableCell>{instructor.company}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {instructor.specialization.map((spec, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">{spec}</Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm italic">{instructor.notes}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => startEdit(instructor)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDeleteInstructor(instructor.id)}>
-                      <Trash className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <InstructorTable 
+          instructors={filteredInstructors} 
+          onEdit={startEdit} 
+          onDelete={handleDeleteInstructor} 
+        />
       )}
+
+      <InstructorFormDialog 
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        instructor={editInstructor}
+        onSave={handleSaveInstructor}
+      />
     </div>
   );
 };
