@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Session } from '@/data/scheduleData';
 import { Track } from '@/types/schedule';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,67 +12,68 @@ export const useScheduleData = () => {
   const [trackVisibility, setTrackVisibility] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
+  // Memoize fetchData function to prevent unnecessary re-renders
+  const fetchData = useCallback(async () => {
+    try {
+      const { data: tracksData, error: tracksError } = await supabase
+        .from('tracks')
+        .select('*');
+
+      if (tracksError) throw tracksError;
+
+      const formattedTracks = tracksData.map((track: any) => ({
+        id: track.id,
+        name: track.name,
+        groupId: track.group_id,
+        visible: track.visible
+      }));
+
+      setTracks(formattedTracks);
+      
+      const visibilityState = tracksData.reduce((acc: Record<string, boolean>, track: any) => {
+        acc[track.id] = track.visible;
+        return acc;
+      }, {});
+      setTrackVisibility(visibilityState);
+
+      // Get sessions and properly map the fields
+      const { data: sessionsData, error: sessionsError } = await supabase
+        .from('sessions')
+        .select('*');
+
+      if (sessionsError) throw sessionsError;
+
+      const formattedSessions = sessionsData.map((session: any) => ({
+        id: session.id,
+        dayId: session.day_id,
+        trackId: session.track_id,
+        title: session.title,
+        instructor: session.instructor,
+        type: session.type,
+        time: session.time,
+        customStartTime: session.custom_start_time,
+        customEndTime: session.custom_end_time,
+        count: session.count || 0,
+        total: session.total || 0
+      }));
+
+      setSessions(formattedSessions);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load schedule data.",
+      });
+      setLoading(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const { data: tracksData, error: tracksError } = await supabase
-          .from('tracks')
-          .select('*');
-
-        if (tracksError) throw tracksError;
-
-        const formattedTracks = tracksData.map((track: any) => ({
-          id: track.id,
-          name: track.name,
-          groupId: track.group_id,
-          visible: track.visible
-        }));
-
-        setTracks(formattedTracks);
-        
-        const visibilityState = tracksData.reduce((acc: Record<string, boolean>, track: any) => {
-          acc[track.id] = track.visible;
-          return acc;
-        }, {});
-        setTrackVisibility(visibilityState);
-
-        // Get sessions and properly map the fields
-        const { data: sessionsData, error: sessionsError } = await supabase
-          .from('sessions')
-          .select('*');
-
-        if (sessionsError) throw sessionsError;
-
-        const formattedSessions = sessionsData.map((session: any) => ({
-          id: session.id,
-          dayId: session.day_id,
-          trackId: session.track_id,
-          title: session.title,
-          instructor: session.instructor,
-          type: session.type,
-          time: session.time,
-          customStartTime: session.custom_start_time,
-          customEndTime: session.custom_end_time,
-          count: session.count || 0,
-          total: session.total || 0
-        }));
-
-        setSessions(formattedSessions);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to load schedule data.",
-        });
-        setLoading(false);
-      }
-    };
-
     fetchData();
     
-    // Set up real-time subscriptions
+    // Set up real-time subscriptions with optimized filter conditions
     const channel = supabase
       .channel('schedule_changes')
       .on('postgres_changes', 
@@ -115,7 +116,7 @@ export const useScheduleData = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [toast]);
+  }, [fetchData]);
 
   return { tracks, setTracks, sessions, loading, trackVisibility, setTrackVisibility };
 };

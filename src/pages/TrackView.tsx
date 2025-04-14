@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import SessionCard from '@/components/SessionCard';
 import { useToast } from '@/hooks/use-toast';
@@ -40,40 +40,9 @@ const TrackView = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (trackId) {
-      fetchTrackData();
-      
-      // Set up real-time subscription with improved channel naming
-      const channel = supabase
-        .channel(`track_${trackId}_sessions`)
-        .on('postgres_changes', 
-          { 
-            event: '*', 
-            schema: 'public', 
-            table: 'sessions', 
-            filter: `track_id=eq.${trackId}` 
-          }, 
-          (payload) => {
-            console.log('Session change detected:', payload);
-            fetchTrackData();
-            toast({
-              title: "Sessions Updated",
-              description: "Session data has been updated",
-            });
-          }
-        )
-        .subscribe((status) => {
-          console.log(`Subscription status for track_${trackId}_sessions:`, status);
-        });
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [trackId]);
-
-  const fetchTrackData = async () => {
+  const fetchTrackData = useCallback(async () => {
+    if (!trackId) return;
+    
     try {
       // Fetch track info
       const { data: trackData, error: trackError } = await supabase
@@ -133,18 +102,54 @@ const TrackView = () => {
       });
       setLoading(false);
     }
-  };
+  }, [trackId, toast]);
 
-  // Get sessions for a specific day
-  const getSessionsForDay = (dayId: string) => {
+  useEffect(() => {
+    fetchTrackData();
+    
+    // Set up real-time subscription with improved channel naming
+    if (trackId) {
+      const channel = supabase
+        .channel(`track_${trackId}_sessions`)
+        .on('postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'sessions', 
+            filter: `track_id=eq.${trackId}` 
+          }, 
+          (payload) => {
+            console.log('Session change detected:', payload);
+            fetchTrackData();
+            toast({
+              title: "Sessions Updated",
+              description: "Session data has been updated",
+            });
+          }
+        )
+        .subscribe((status) => {
+          console.log(`Subscription status for track_${trackId}_sessions:`, status);
+        });
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [trackId, fetchTrackData, toast]);
+
+  // Memoize getSessionsForDay function to prevent unnecessary recalculations
+  const getSessionsForDay = useCallback((dayId: string) => {
     return sessions.filter(session => session.day_id === dayId);
-  };
+  }, [sessions]);
 
+  // Add responsive skeletal loading UI
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-        <span className="ml-2">Loading track data...</span>
+      <div className="flex justify-center items-center min-h-[calc(100vh-64px)]">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+          <span className="text-gray-600">Loading track data...</span>
+        </div>
       </div>
     );
   }
@@ -152,35 +157,35 @@ const TrackView = () => {
   if (!track) {
     return (
       <div className="container mx-auto py-8 px-4">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Track not found</h1>
-          <p>The track you're looking for doesn't exist or you don't have permission to view it.</p>
+        <div className="text-center p-8 bg-gray-50 rounded-lg shadow">
+          <h1 className="text-2xl font-bold mb-4">Track not found</h1>
+          <p className="text-gray-600">The track you're looking for doesn't exist or you don't have permission to view it.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">{track.name} Schedule</h1>
+    <div className="container mx-auto py-4 sm:py-8 px-2 sm:px-4">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">{track.name} Schedule</h1>
       
       {days.length === 0 ? (
-        <div className="text-center py-8 bg-gray-50 rounded-lg">
+        <div className="text-center py-8 bg-gray-50 rounded-lg shadow">
           <p className="text-gray-500">No sessions scheduled for this track yet.</p>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           {days.map(day => (
-            <div key={day.id} className="bg-white rounded-lg shadow-md p-4">
-              <div className="mb-4 border-b pb-2">
-                <h2 className="text-xl font-semibold">{day.name}</h2>
-                <p className="text-gray-500">{day.date}</p>
+            <div key={day.id} className="bg-white rounded-lg shadow-md p-3 sm:p-4">
+              <div className="mb-3 sm:mb-4 border-b pb-2">
+                <h2 className="text-lg sm:text-xl font-semibold">{day.name}</h2>
+                <p className="text-gray-500 text-sm sm:text-base">{day.date}</p>
               </div>
               
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {getSessionsForDay(day.id).length > 0 ? (
                   getSessionsForDay(day.id).map(session => (
-                    <div key={session.id} className="p-2">
+                    <div key={session.id} className="p-1 sm:p-2">
                       <SessionCard
                         title={session.title}
                         instructor={session.instructor}

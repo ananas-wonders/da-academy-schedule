@@ -1,8 +1,7 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import { FolderPlus, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -55,7 +54,7 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     fetchTrackGroups();
   }, [initialDays, initialTracks, initialSessions]);
 
-  const fetchTrackGroups = async () => {
+  const fetchTrackGroups = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('track_groups')
@@ -72,22 +71,25 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     } catch (error) {
       console.error('Error fetching track groups:', error);
     }
-  };
+  }, []);
 
-  const visibleTracks = tracks.filter(track => {
-    if (!track.groupId) return track.visible !== false;
-    const group = groups.find(g => g.id === track.groupId);
-    return group ? (group.visible !== false && track.visible !== false) : (track.visible !== false);
-  });
+  // Memoize visibleTracks calculation to prevent unnecessary recalculations
+  const visibleTracks = useMemo(() => {
+    return tracks.filter(track => {
+      if (!track.groupId) return track.visible !== false;
+      const group = groups.find(g => g.id === track.groupId);
+      return group ? (group.visible !== false && track.visible !== false) : (track.visible !== false);
+    });
+  }, [tracks, groups]);
 
-  const getSessionsForCell = (dayId: string, trackId: string) => {
+  const getSessionsForCell = useCallback((dayId: string, trackId: string) => {
     return sessions.filter(
       session => session.dayId === dayId && session.trackId === trackId
     ).slice(0, 5);
-  };
+  }, [sessions]);
 
-  // Check if a session conflicts with another session (same instructor, same day, different track)
-  const hasConflict = (session: Session) => {
+  // Memoize hasConflict function to prevent unnecessary calculations
+  const hasConflict = useCallback((session: Session) => {
     return sessions.some(s => 
       s.id !== session.id && 
       s.dayId === session.dayId && 
@@ -95,9 +97,9 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
       s.instructor === session.instructor &&
       s.time === session.time
     );
-  };
+  }, [sessions]);
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event;
     
     if (over && active.id !== over.id) {
@@ -108,16 +110,14 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         return arrayMove(items, oldIndex, newIndex);
       });
 
-      // Update order in database (if needed in the future)
-
       toast({
         title: "Track order updated",
         description: "The track order has been successfully updated",
       });
     }
-  };
+  }, [toast]);
 
-  const handleEditTrackName = async (id: string, newName: string) => {
+  const handleEditTrackName = useCallback(async (id: string, newName: string) => {
     try {
       // Update in database
       const { error } = await supabase
@@ -144,9 +144,9 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         description: "Failed to update track name",
       });
     }
-  };
+  }, [tracks, toast]);
 
-  const handleAddTrack = async () => {
+  const handleAddTrack = useCallback(async () => {
     try {
       const newId = `track-${Date.now()}`;
       const newName = `New Track ${tracks.length + 1}`;
@@ -173,7 +173,7 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         description: "Failed to add new track",
       });
     }
-  };
+  }, [tracks, toast]);
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return;
@@ -261,7 +261,7 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     }
   };
 
-  const handleToggleGroupVisibility = async (groupId: string, visible: boolean) => {
+  const handleToggleGroupVisibility = useCallback(async (groupId: string, visible: boolean) => {
     try {
       // Update in database
       const { error } = await supabase
@@ -288,9 +288,9 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         description: "Failed to update group visibility",
       });
     }
-  };
+  }, [groups, toast]);
 
-  const handleToggleTrackVisibility = async (trackId: string, visible: boolean) => {
+  const handleToggleTrackVisibility = useCallback(async (trackId: string, visible: boolean) => {
     try {
       // Update in database
       const { error } = await supabase
@@ -317,9 +317,9 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         description: "Failed to update track visibility",
       });
     }
-  };
+  }, [tracks, toast]);
   
-  const handleCopyTrackLink = (trackId: string, trackName: string) => {
+  const handleCopyTrackLink = useCallback((trackId: string, trackName: string) => {
     const url = `${window.location.origin}/track/${trackId}`;
     navigator.clipboard.writeText(url).then(() => {
       toast({
@@ -334,9 +334,9 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         description: "Failed to copy track link to clipboard",
       });
     });
-  };
+  }, [toast]);
 
-  const handleAddSession = async (dayId: string, trackId: string, newSession: Omit<SessionCardProps, 'id'>) => {
+  const handleAddSession = useCallback(async (dayId: string, trackId: string, newSession: Omit<SessionCardProps, 'id'>) => {
     try {
       const sessionId = `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       const session: Session = {
@@ -380,17 +380,17 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         description: "Failed to add new session",
       });
     }
-  };
+  }, [sessions, toast]);
 
-  const handleEditSession = (sessionId: string) => {
+  const handleEditSession = useCallback((sessionId: string) => {
     const session = sessions.find(s => s.id === sessionId);
     if (session) {
       setEditingSession(session);
       setSessionDialogOpen(true);
     }
-  };
+  }, [sessions, setEditingSession, setSessionDialogOpen]);
 
-  const handleSaveEditedSession = async (updatedSession: Session) => {
+  const handleSaveEditedSession = useCallback(async (updatedSession: Session) => {
     try {
       // Update in database
       const { error } = await supabase
@@ -426,23 +426,23 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         description: "Failed to update session",
       });
     }
-  };
+  }, [sessions, toast]);
 
-  const getRandomColor = () => {
+  const getRandomColor = useCallback(() => {
     const colors = [
       '#f87171', '#fb923c', '#fbbf24', '#a3e635', 
       '#4ade80', '#2dd4bf', '#38bdf8', '#818cf8', 
       '#c084fc', '#e879f9', '#fb7185'
     ];
     return colors[Math.floor(Math.random() * colors.length)];
-  };
+  }, []);
 
-  const getTrackGroup = (track: Track) => {
+  const getTrackGroup = useCallback((track: Track) => {
     if (!track.groupId) return null;
     return groups.find(g => g.id === track.groupId) || null;
-  };
+  }, [groups]);
 
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
 
   return (
     <div className="overflow-x-auto">
@@ -473,6 +473,14 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
                 />
               </SheetContent>
             </Sheet>
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleAddTrack}
+            >
+              Add Track
+            </Button>
           </div>
         </div>
 
@@ -491,13 +499,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
           getSessionsForCell={getSessionsForCell}
           getTrackGroup={getTrackGroup}
         />
-        
-        <div className="flex justify-end mt-4">
-          <Button onClick={handleAddTrack} size="sm">
-            <FolderPlus className="mr-2 h-4 w-4" />
-            Add Track
-          </Button>
-        </div>
       </DndContext>
       
       <EditSessionDialog 
