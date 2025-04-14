@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -103,7 +104,7 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
 
       toast({
         title: "Track order updated",
-        description: "The track order has been successfully updated",
+        description: "The track order has been successfully updated"
       });
     }
   }, [toast]);
@@ -123,14 +124,14 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
 
       toast({
         title: "Track renamed",
-        description: `Track has been renamed to "${newName}"`,
+        description: `Track has been renamed to "${newName}"`
       });
     } catch (error) {
       console.error('Error updating track name:', error);
       toast({
         variant: "destructive",
         title: "Error updating track",
-        description: "Failed to update track name",
+        description: "Failed to update track name"
       });
     }
   }, [tracks, toast]);
@@ -150,14 +151,14 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
       
       toast({
         title: "Track added",
-        description: "A new track has been added to the schedule",
+        description: "A new track has been added to the schedule"
       });
     } catch (error) {
       console.error('Error adding track:', error);
       toast({
         variant: "destructive",
         title: "Error adding track",
-        description: "Failed to add new track",
+        description: "Failed to add new track"
       });
     }
   }, [tracks, toast]);
@@ -200,14 +201,14 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
       
       toast({
         title: "Track group created",
-        description: `"${newGroupName}" group has been created with the selected tracks",
+        description: `"${newGroupName}" group has been created with the selected tracks`
       });
     } catch (error) {
       console.error('Error creating group:', error);
       toast({
         variant: "destructive",
         title: "Error creating group",
-        description: "Failed to create track group",
+        description: "Failed to create track group"
       });
     }
   };
@@ -231,14 +232,14 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
       
       toast({
         title: "Groups updated",
-        description: "Track groups have been successfully updated",
+        description: "Track groups have been successfully updated"
       });
     } catch (error) {
       console.error('Error updating groups:', error);
       toast({
         variant: "destructive",
         title: "Error updating groups",
-        description: "Failed to update track groups",
+        description: "Failed to update track groups"
       });
     }
   };
@@ -258,14 +259,14 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
       
       toast({
         title: visible ? "Group shown" : "Group hidden",
-        description: `Group is now ${visible ? 'visible' : 'hidden'} in the schedule`,
+        description: `Group is now ${visible ? 'visible' : 'hidden'} in the schedule`
       });
     } catch (error) {
       console.error('Error updating group visibility:', error);
       toast({
         variant: "destructive",
         title: "Error updating visibility",
-        description: "Failed to update group visibility",
+        description: "Failed to update group visibility"
       });
     }
   }, [groups, toast]);
@@ -285,14 +286,14 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
       
       toast({
         title: visible ? "Track shown" : "Track hidden",
-        description: `Track is now ${visible ? 'visible' : 'hidden'} in the schedule`,
+        description: `Track is now ${visible ? 'visible' : 'hidden'} in the schedule`
       });
     } catch (error) {
       console.error('Error updating track visibility:', error);
       toast({
         variant: "destructive",
         title: "Error updating visibility",
-        description: "Failed to update track visibility",
+        description: "Failed to update track visibility"
       });
     }
   }, [tracks, toast]);
@@ -302,14 +303,14 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     navigator.clipboard.writeText(url).then(() => {
       toast({
         title: "Link copied",
-        description: `Link to ${trackName} schedule has been copied to clipboard`,
+        description: `Link to ${trackName} schedule has been copied to clipboard`
       });
     }).catch(err => {
       console.error('Error copying text: ', err);
       toast({
         variant: "destructive",
         title: "Error copying link",
-        description: "Failed to copy track link to clipboard",
+        description: "Failed to copy track link to clipboard"
       });
     });
   }, [toast]);
@@ -346,14 +347,14 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
       
       toast({
         title: "Session added",
-        description: `A new session "${newSession.title}" has been added to the schedule`,
+        description: `A new session "${newSession.title}" has been added to the schedule`
       });
     } catch (error) {
       console.error('Error adding session:', error);
       toast({
         variant: "destructive",
         title: "Error adding session",
-        description: "Failed to add new session",
+        description: "Failed to add new session"
       });
     }
   }, [sessions, toast]);
@@ -390,14 +391,14 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
       
       toast({
         title: "Session updated",
-        description: `The session "${updatedSession.title}" has been updated`,
+        description: `The session "${updatedSession.title}" has been updated`
       });
     } catch (error) {
       console.error('Error updating session:', error);
       toast({
         variant: "destructive",
         title: "Error updating session",
-        description: "Failed to update session",
+        description: "Failed to update session"
       });
     }
   }, [sessions, toast]);
