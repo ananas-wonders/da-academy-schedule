@@ -9,13 +9,17 @@ interface CourseProgressBarProps {
 
 const CourseProgressBar: React.FC<CourseProgressBarProps> = ({ course }) => {
   const getSessionProgress = (course: Course) => {
-    const progressPercentage = course.numberOfSessions > 0 
-      ? Math.min(100, Math.round((course.scheduledSessions / course.numberOfSessions) * 100)) 
+    // Ensure these values are numbers by using Number() conversion
+    const scheduledSessions = Number(course.scheduledSessions) || 0;
+    const numberOfSessions = Number(course.numberOfSessions) || 0;
+    
+    const progressPercentage = numberOfSessions > 0 
+      ? Math.min(100, Math.round((scheduledSessions / numberOfSessions) * 100)) 
       : 0;
     
     return {
-      scheduled: course.scheduledSessions,
-      total: course.numberOfSessions,
+      scheduled: scheduledSessions,
+      total: numberOfSessions,
       percentage: progressPercentage
     };
   };

@@ -1,12 +1,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Session } from '@/data/scheduleData';
-import { Track } from '@/types/schedule';
+import { Track, TrackGroup } from '@/types/schedule';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export const useScheduleData = () => {
   const [tracks, setTracks] = useState<Track[]>([]);
+  const [trackGroups, setTrackGroups] = useState<TrackGroup[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [trackVisibility, setTrackVisibility] = useState<Record<string, boolean>>({});
@@ -17,18 +18,33 @@ export const useScheduleData = () => {
     try {
       setLoading(true);
       
+      // First fetch track groups
+      const { data: groupsData, error: groupsError } = await supabase
+        .from('track_groups')
+        .select('*');
+      
+      if (groupsError) throw groupsError;
+      
+      setTrackGroups(groupsData || []);
+      
+      // Then fetch tracks separately
       const { data: tracksData, error: tracksError } = await supabase
         .from('tracks')
-        .select('*, track_groups(id, name, color)');
+        .select('*');
       
       if (tracksError) throw tracksError;
       
-      const formattedTracks = tracksData.map((track: any) => ({
-        id: track.id,
-        name: track.name,
-        groupId: track.group_id,
-        visible: track.visible !== false // Default to true if not specified
-      }));
+      // Map the tracks and associate with groups in memory
+      const formattedTracks = tracksData.map((track: any) => {
+        const trackGroup = groupsData.find((group: any) => group.id === track.group_id);
+        
+        return {
+          id: track.id,
+          name: track.name,
+          groupId: track.group_id,
+          visible: track.visible !== false // Default to true if not specified
+        };
+      });
       
       setTracks(formattedTracks);
       
@@ -120,5 +136,5 @@ export const useScheduleData = () => {
     };
   }, [fetchData]);
 
-  return { tracks, setTracks, sessions, loading, trackVisibility, setTrackVisibility };
+  return { tracks, setTracks, sessions, loading, trackVisibility, setTrackVisibility, trackGroups };
 };

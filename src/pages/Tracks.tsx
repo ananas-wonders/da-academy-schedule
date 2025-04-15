@@ -25,33 +25,46 @@ const Tracks: React.FC = () => {
   const fetchTracks = useCallback(async () => {
     try {
       setLoading(true);
+      
+      // Fetch track groups first
+      const { data: groupsData, error: groupsError } = await supabase
+        .from('track_groups')
+        .select('*');
+      
+      if (groupsError) throw groupsError;
+      
+      // Then fetch tracks
       const { data, error } = await supabase
         .from('tracks')
-        .select('*, track_groups(id, name, color)');
+        .select('*');
       
       if (error) throw error;
       
-      // Convert data to our Track interface format
-      const formattedTracks: Track[] = data.map((track: any) => ({
-        id: track.id,
-        programName: track.name || '',
-        code: track.code || '',
-        supervisor: track.supervisor || '',
-        deputySupervisor: track.deputy_supervisor || '',
-        studentsCount: track.students_count || 0,
-        studentCoordinator: track.student_coordinator || '',
-        teamsLink: track.teams_link || '',
-        assignmentFolder: track.assignment_folder || '',
-        gradeSheet: track.grade_sheet || '',
-        attendanceForm: track.attendance_form || '',
-        telegramGeneralGroup: track.telegram_general_group || '',
-        telegramCourseGroup: track.telegram_course_group || '',
-        groupId: track.group_id || null,
-        groupName: track.track_groups ? track.track_groups.name : '',
-        groupColor: track.track_groups ? track.track_groups.color : '',
-        createdAt: track.created_at,
-        updatedAt: track.updated_at
-      }));
+      // Convert data to our Track interface format by matching groups in memory
+      const formattedTracks: Track[] = data.map((track: any) => {
+        const group = groupsData?.find((g: any) => g.id === track.group_id) || null;
+        
+        return {
+          id: track.id,
+          programName: track.name || '',
+          code: track.code || '',
+          supervisor: track.supervisor || '',
+          deputySupervisor: track.deputy_supervisor || '',
+          studentsCount: track.students_count || 0,
+          studentCoordinator: track.student_coordinator || '',
+          teamsLink: track.teams_link || '',
+          assignmentFolder: track.assignment_folder || '',
+          gradeSheet: track.grade_sheet || '',
+          attendanceForm: track.attendance_form || '',
+          telegramGeneralGroup: track.telegram_general_group || '',
+          telegramCourseGroup: track.telegram_course_group || '',
+          groupId: track.group_id || null,
+          groupName: group ? group.name : '',
+          groupColor: group ? group.color : '',
+          createdAt: track.created_at,
+          updatedAt: track.updated_at
+        };
+      });
       
       setTracks(formattedTracks);
     } catch (error) {
