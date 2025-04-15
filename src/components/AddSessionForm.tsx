@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -81,28 +80,25 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ onSubmit, occupiedTimeS
   const [courseOpen, setCourseOpen] = useState(false);
   const [instructorOpen, setInstructorOpen] = useState(false);
 
-  const { data: courses = [] } = useQuery({
+  const { data: courses = [], isLoading: coursesLoading, error: coursesError } = useQuery({
     queryKey: ['courses'],
     queryFn: fetchCourses,
   });
 
-  const { data: instructors = [] } = useQuery({
+  const { data: instructors = [], isLoading: instructorsLoading, error: instructorsError } = useQuery({
     queryKey: ['instructors'],
     queryFn: fetchInstructors,
   });
 
-  // Filter courses
   const filteredCourses = courses;
   
   const selectedCourse = courses.find(course => course.id === courseId);
   const selectedInstructor = instructors.find(instructor => instructor.id === instructorId);
 
-  // Check if a time slot is occupied
   const isTimeSlotOccupied = (timeValue: string): boolean => {
     if (!occupiedTimeSlots || occupiedTimeSlots.length === 0) return false;
     
     if (timeValue === 'custom') {
-      // For custom time slots, we'll check this separately
       return false;
     }
     
@@ -115,23 +111,21 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ onSubmit, occupiedTimeS
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form
     if (!courseId || !instructorId) {
-      return; // Simple validation
+      return;
     }
     
     onSubmit({
       title: selectedCourse?.title || '',
       instructor: selectedInstructor?.name || '',
       type,
-      count: 0, // We'll calculate this automatically later
-      total: 10, // We'll calculate this automatically later
+      count: 0,
+      total: 10,
       time,
       customStartTime: time === 'custom' ? customStartTime : undefined,
       customEndTime: time === 'custom' ? customEndTime : undefined
     });
     
-    // Reset form
     setCourseId('');
     setInstructorId('');
     setType('online');
