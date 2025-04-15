@@ -1,11 +1,14 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Menu } from 'lucide-react';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Header = () => {
+  const auth = useAuth();
+
   return (
     <header className="sticky top-0 z-10 bg-white border-b shadow-sm">
       <div className="container mx-auto py-3 px-4">
@@ -59,29 +62,22 @@ const Header = () => {
               </SheetContent>
             </Sheet>
             
-            <AuthProvider>
-              {(auth) => {
-                if (auth?.user) {
-                  return (
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm hidden md:inline">{auth.user.email}</span>
-                      <Button 
-                        variant="outline"
-                        size="sm"
-                        onClick={() => auth.signOut()}
-                      >
-                        Logout
-                      </Button>
-                    </div>
-                  );
-                }
-                return (
-                  <Link to="/auth">
-                    <Button variant="outline" size="sm">Login</Button>
-                  </Link>
-                );
-              }}
-            </AuthProvider>
+            {auth?.user ? (
+              <div className="flex items-center gap-4">
+                <span className="text-sm hidden md:inline">{auth.user.email}</span>
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={() => auth.signOut()}
+                >
+                  Logout
+                </Button>
+              </div>
+            ) : (
+              <Link to="/auth">
+                <Button variant="outline" size="sm">Login</Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>
