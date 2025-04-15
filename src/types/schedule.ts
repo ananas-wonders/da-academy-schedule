@@ -32,4 +32,23 @@ export interface Session extends SessionCardProps {
   trackId: string;
 }
 
+export interface Course {
+  id: string;
+  courseCode: string;
+  term: string;
+  title: string;
+  lectureHours: number;
+  labHours: number;
+  selfStudyHours: number;
+  totalHours: number;
+  numberOfSessions: number;
+  scheduledSessions: number;
+  status: 'scheduled' | 'partially-scheduled' | 'not-scheduled';
+  category: string;
+  notes: string;
+  trackId: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export type ViewDensity = '1week' | '2weeks' | 'month' | '2months' | 'week' | 'custom';
