@@ -13,6 +13,8 @@ export interface TrackGroup {
   name: string;
   color?: string;
   visible?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Day {

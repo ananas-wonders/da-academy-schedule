@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -16,15 +15,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-
-interface TrackGroup {
-  id: string;
-  name: string;
-  color?: string;
-  visible: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+import { TrackGroup } from '@/types/schedule';
 
 interface TrackGroupsManagerProps {
   open: boolean;
@@ -45,7 +36,6 @@ const TrackGroupsManager: React.FC<TrackGroupsManagerProps> = ({
   const [newGroupColor, setNewGroupColor] = useState('#6366f1');
   const { toast } = useToast();
 
-  // Fetch track groups when component mounts
   useEffect(() => {
     const fetchTrackGroups = async () => {
       try {
@@ -99,7 +89,7 @@ const TrackGroupsManager: React.FC<TrackGroupsManagerProps> = ({
       
       if (error) throw error;
       
-      setGroups(prev => [...prev, {...newGroup, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()}]);
+      setGroups(prev => [...prev, {...newGroup}]);
       setNewGroupName('');
       setNewGroupColor('#6366f1');
       setNewGroupDialogOpen(false);
@@ -143,7 +133,7 @@ const TrackGroupsManager: React.FC<TrackGroupsManagerProps> = ({
       
       setGroups(prev => prev.map(group => 
         group.id === editingGroup.id 
-          ? { ...editingGroup, updatedAt: new Date().toISOString() } 
+          ? { ...editingGroup } 
           : group
       ));
       setEditingGroup(null);
@@ -306,7 +296,6 @@ const TrackGroupsManager: React.FC<TrackGroupsManagerProps> = ({
         </DialogFooter>
       </DialogContent>
       
-      {/* Dialog for adding a new group */}
       <Dialog open={newGroupDialogOpen} onOpenChange={setNewGroupDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -351,7 +340,6 @@ const TrackGroupsManager: React.FC<TrackGroupsManagerProps> = ({
         </DialogContent>
       </Dialog>
       
-      {/* Dialog for editing an existing group */}
       <Dialog 
         open={!!editingGroup} 
         onOpenChange={(open) => !open && setEditingGroup(null)}

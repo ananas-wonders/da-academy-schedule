@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +9,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+
+type CourseDB = {
+  id: string;
+  course_code: string;
+  term: string;
+  title: string;
+  lecture_hours: number;
+  lab_hours: number;
+  self_study_hours: number;
+  total_hours: number;
+  number_of_sessions: number;
+  scheduled_sessions: number;
+  status: 'scheduled' | 'partially-scheduled' | 'not-scheduled';
+  category: string;
+  notes: string;
+  track_id: string;
+  created_at: string;
+  updated_at: string;
+}
 
 type Course = {
   id: string;
@@ -53,13 +71,11 @@ const CourseLists = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Load tracks and courses from supabase
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         
-        // Fetch tracks first
         const { data: trackData, error: trackError } = await supabase
           .from('tracks')
           .select('id, name')
@@ -69,20 +85,17 @@ const CourseLists = () => {
         
         setTracks(trackData);
         
-        // If there are tracks, set the first one as active
         if (trackData.length > 0) {
           setActiveTrack('all');
           setNewCourse(prev => ({ ...prev, trackId: trackData[0].id }));
         }
         
-        // Fetch courses
         const { data: courseData, error: courseError } = await supabase
           .from('courses')
           .select('*');
         
         if (courseError) throw courseError;
         
-        // Transform course data to match our type
         const formattedCourses: Course[] = courseData.map((course: any) => ({
           id: course.id,
           courseCode: course.course_code,
@@ -115,14 +128,12 @@ const CourseLists = () => {
     
     fetchData();
     
-    // Set up realtime subscription for courses
     const courseSubscription = supabase
       .channel('courses-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'courses' }, 
         (payload) => {
           console.log('Course change detected:', payload);
-          // Refresh courses when changes happen
           supabase
             .from('courses')
             .select('*')
@@ -157,24 +168,20 @@ const CourseLists = () => {
       )
       .subscribe();
     
-    // Cleanup subscription
     return () => {
       supabase.removeChannel(courseSubscription);
     };
   }, [toast]);
 
-  // Load sessions count for each course
   useEffect(() => {
     const loadSessionData = async () => {
       try {
-        // Get all sessions
         const { data: sessionsData, error } = await supabase
           .from('sessions')
           .select('title');
         
         if (error) throw error;
         
-        // Count sessions per course title
         const counts: {[courseTitle: string]: number} = {};
         
         sessionsData.forEach((session: any) => {
@@ -183,7 +190,6 @@ const CourseLists = () => {
           }
         });
         
-        // Update course scheduled sessions based on session counts
         const updatedCourses = courses.map(course => {
           const scheduledSessions = counts[course.title] || 0;
           return {
@@ -195,7 +201,6 @@ const CourseLists = () => {
         
         setCourses(updatedCourses);
         
-        // Update database with new scheduled session counts and status
         updatedCourses.forEach(async (course) => {
           if (course.scheduledSessions !== 0) {
             await supabase
@@ -217,7 +222,6 @@ const CourseLists = () => {
     }
   }, [courses]);
 
-  // Helper function to determine status based on scheduled vs total sessions
   const getStatus = (scheduled: number, total: number): Course['status'] => {
     if (scheduled === 0) return 'not-scheduled';
     if (scheduled < total) return 'partially-scheduled';
@@ -242,13 +246,12 @@ const CourseLists = () => {
 
   const handleAddCourse = async () => {
     try {
-      // Calculate total hours and number of sessions
       const totalHours = Number(newCourse.lectureHours) + Number(newCourse.labHours) + Number(newCourse.selfStudyHours);
       const numberOfSessions = Math.ceil(totalHours / 3);
       
       const courseId = `course-${Date.now()}`;
       
-      const courseData = {
+      const courseData: CourseDB = {
         id: courseId,
         course_code: newCourse.courseCode,
         title: newCourse.title,
@@ -262,7 +265,9 @@ const CourseLists = () => {
         status: 'not-scheduled',
         category: newCourse.category,
         notes: newCourse.notes,
-        track_id: newCourse.trackId
+        track_id: newCourse.trackId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
       
       const { error } = await supabase
@@ -301,11 +306,9 @@ const CourseLists = () => {
     if (!editCourse) return;
     
     try {
-      // Recalculate totals
       const totalHours = Number(editCourse.lectureHours) + Number(editCourse.labHours) + Number(editCourse.selfStudyHours);
       const numberOfSessions = Math.ceil(totalHours / 3);
       
-      // Determine status based on scheduled sessions
       const status = getStatus(editCourse.scheduledSessions, numberOfSessions);
       
       const courseData = {
@@ -317,10 +320,12 @@ const CourseLists = () => {
         self_study_hours: Number(editCourse.selfStudyHours),
         total_hours: totalHours,
         number_of_sessions: numberOfSessions,
+        scheduled_sessions: editCourse.scheduledSessions,
         status,
         category: editCourse.category,
         notes: editCourse.notes,
-        track_id: editCourse.trackId
+        track_id: editCourse.trackId,
+        updated_at: new Date().toISOString()
       };
       
       const { error } = await supabase
