@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,24 +10,27 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Course } from '@/types/schedule';
 
 type CourseDB = {
   id: string;
-  course_code: string;
-  term: string;
+  course_code: string | null;
+  term: string | null;
   title: string;
-  lecture_hours: number;
-  lab_hours: number;
-  self_study_hours: number;
-  total_hours: number;
-  number_of_sessions: number;
-  scheduled_sessions: number;
-  status: 'scheduled' | 'partially-scheduled' | 'not-scheduled';
-  category: string;
-  notes: string;
-  track_id: string;
+  lecture_hours: number | null;
+  lab_hours: number | null;
+  self_study_hours: number | null;
+  total_hours: number | null;
+  number_of_sessions: number | null;
+  scheduled_sessions: number | null;
+  status: 'scheduled' | 'partially-scheduled' | 'not-scheduled' | null;
+  category: string | null;
+  notes: string | null;
+  track_id: string | null;
   created_at: string;
   updated_at: string;
+  description?: string | null;
+  duration?: number | null;
 }
 
 type Course = {

@@ -11,27 +11,63 @@ export type Database = {
     Tables: {
       courses: {
         Row: {
+          category: string | null
+          course_code: string | null
           created_at: string
           description: string | null
           duration: number | null
           id: string
+          lab_hours: number | null
+          lecture_hours: number | null
+          notes: string | null
+          number_of_sessions: number | null
+          scheduled_sessions: number | null
+          self_study_hours: number | null
+          status: string | null
+          term: string | null
           title: string
+          total_hours: number | null
+          track_id: string | null
           updated_at: string
         }
         Insert: {
+          category?: string | null
+          course_code?: string | null
           created_at?: string
           description?: string | null
           duration?: number | null
           id?: string
+          lab_hours?: number | null
+          lecture_hours?: number | null
+          notes?: string | null
+          number_of_sessions?: number | null
+          scheduled_sessions?: number | null
+          self_study_hours?: number | null
+          status?: string | null
+          term?: string | null
           title: string
+          total_hours?: number | null
+          track_id?: string | null
           updated_at?: string
         }
         Update: {
+          category?: string | null
+          course_code?: string | null
           created_at?: string
           description?: string | null
           duration?: number | null
           id?: string
+          lab_hours?: number | null
+          lecture_hours?: number | null
+          notes?: string | null
+          number_of_sessions?: number | null
+          scheduled_sessions?: number | null
+          self_study_hours?: number | null
+          status?: string | null
+          term?: string | null
           title?: string
+          total_hours?: number | null
+          track_id?: string | null
           updated_at?: string
         }
         Relationships: []

@@ -49,6 +49,8 @@ export interface Course {
   trackId: string;
   created_at?: string;
   updated_at?: string;
+  description?: string;
+  duration?: number;
 }
 
 export type ViewDensity = '1week' | '2weeks' | 'month' | '2months' | 'week' | 'custom';
