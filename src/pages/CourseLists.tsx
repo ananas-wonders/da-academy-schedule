@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,23 +31,6 @@ type CourseDB = {
   description?: string | null;
   duration?: number | null;
 }
-
-type Course = {
-  id: string;
-  courseCode: string;
-  term: string;
-  title: string;
-  lectureHours: number;
-  labHours: number;
-  selfStudyHours: number;
-  totalHours: number;
-  numberOfSessions: number;
-  scheduledSessions: number;
-  status: 'scheduled' | 'partially-scheduled' | 'not-scheduled';
-  category: string;
-  notes: string;
-  trackId: string;
-};
 
 const CourseLists = () => {
   const [courses, setCourses] = useState<Course[]>([]);
