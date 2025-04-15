@@ -9,6 +9,7 @@ export interface Instructor {
   notes: string;
   specialization: string[];
   imageUrl?: string;
+  bio?: string;
 }
 
 // Add fields that match the database structure

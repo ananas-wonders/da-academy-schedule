@@ -75,29 +75,44 @@ export type Database = {
       instructors: {
         Row: {
           bio: string | null
+          company: string | null
           created_at: string
           email: string | null
           id: string
+          imageUrl: string | null
           name: string
+          notes: string | null
           phone: string | null
+          specialization: string[] | null
+          subject: string | null
           updated_at: string
         }
         Insert: {
           bio?: string | null
+          company?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          imageUrl?: string | null
           name: string
+          notes?: string | null
           phone?: string | null
+          specialization?: string[] | null
+          subject?: string | null
           updated_at?: string
         }
         Update: {
           bio?: string | null
+          company?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          imageUrl?: string | null
           name?: string
+          notes?: string | null
           phone?: string | null
+          specialization?: string[] | null
+          subject?: string | null
           updated_at?: string
         }
         Relationships: []

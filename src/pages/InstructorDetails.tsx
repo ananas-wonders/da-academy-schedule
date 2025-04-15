@@ -3,7 +3,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search } from 'lucide-react';
-import { Instructor } from '@/types/instructor';
+import { Instructor, InstructorDB } from '@/types/instructor';
 import InstructorCard from '@/components/instructor/InstructorCard';
 import InstructorTable from '@/components/instructor/InstructorTable';
 import InstructorFormDialog from '@/components/instructor/InstructorFormDialog';
@@ -22,7 +22,7 @@ const fetchInstructors = async (): Promise<Instructor[]> => {
     throw error;
   }
   
-  return data.map((instructor): Instructor => ({
+  return data.map((instructor: InstructorDB): Instructor => ({
     id: instructor.id,
     name: instructor.name,
     email: instructor.email || '',
@@ -32,6 +32,7 @@ const fetchInstructors = async (): Promise<Instructor[]> => {
     notes: instructor.notes || '',
     specialization: instructor.specialization || [],
     imageUrl: instructor.imageUrl || '',
+    bio: instructor.bio || '',
   }));
 };
 
