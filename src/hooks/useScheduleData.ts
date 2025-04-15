@@ -15,23 +15,25 @@ export const useScheduleData = () => {
   // Memoize fetchData function to prevent unnecessary re-renders
   const fetchData = useCallback(async () => {
     try {
+      setLoading(true);
+      
       const { data: tracksData, error: tracksError } = await supabase
         .from('tracks')
-        .select('*');
-
+        .select('*, track_groups(id, name, color)');
+      
       if (tracksError) throw tracksError;
-
+      
       const formattedTracks = tracksData.map((track: any) => ({
         id: track.id,
         name: track.name,
         groupId: track.group_id,
-        visible: track.visible
+        visible: track.visible !== false // Default to true if not specified
       }));
-
+      
       setTracks(formattedTracks);
       
       const visibilityState = tracksData.reduce((acc: Record<string, boolean>, track: any) => {
-        acc[track.id] = track.visible;
+        acc[track.id] = track.visible !== false;
         return acc;
       }, {});
       setTrackVisibility(visibilityState);
@@ -40,9 +42,9 @@ export const useScheduleData = () => {
       const { data: sessionsData, error: sessionsError } = await supabase
         .from('sessions')
         .select('*');
-
+      
       if (sessionsError) throw sessionsError;
-
+      
       const formattedSessions = sessionsData.map((session: any) => ({
         id: session.id,
         dayId: session.day_id,
@@ -56,7 +58,7 @@ export const useScheduleData = () => {
         count: session.count || 0,
         total: session.total || 0
       }));
-
+      
       setSessions(formattedSessions);
       setLoading(false);
     } catch (error) {

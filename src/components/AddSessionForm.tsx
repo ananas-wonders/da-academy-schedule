@@ -11,21 +11,12 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { TimeSlot } from '@/hooks/useSessionOverlap';
 import { Badge } from "@/components/ui/badge";
+import { supabase } from '@/integrations/supabase/client';
+import { Course } from '@/types/schedule';
 
 interface AddSessionFormProps {
   onSubmit: (sessionData: Omit<SessionCardProps, 'id'>) => void;
   occupiedTimeSlots?: TimeSlot[];
-}
-
-interface Course {
-  id: string;
-  title: string;
-  trackId: string;
-  lectureHours: number;
-  labHours: number;
-  selfStudyHours: number;
-  totalHours: number;
-  numberOfSessions: number;
 }
 
 interface Instructor {
@@ -34,21 +25,50 @@ interface Instructor {
   phone: string;
 }
 
-// Mock fetch functions for courses and instructors
+// Fetch functions for courses and instructors from Supabase
 const fetchCourses = async (): Promise<Course[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(JSON.parse(localStorage.getItem('courses') || '[]'));
-    }, 300);
-  });
+  const { data, error } = await supabase
+    .from('courses')
+    .select('*');
+  
+  if (error) {
+    console.error('Error fetching courses:', error);
+    throw error;
+  }
+  
+  return data ? data.map((course): Course => ({
+    id: course.id,
+    courseCode: course.course_code || '',
+    term: course.term || '',
+    title: course.title,
+    lectureHours: course.lecture_hours || 0,
+    labHours: course.lab_hours || 0,
+    selfStudyHours: course.self_study_hours || 0,
+    totalHours: course.total_hours || 0,
+    numberOfSessions: course.number_of_sessions || 0,
+    scheduledSessions: course.scheduled_sessions || 0,
+    status: (course.status as 'scheduled' | 'partially-scheduled' | 'not-scheduled') || 'not-scheduled',
+    category: course.category || '',
+    notes: course.notes || '',
+    trackId: course.track_id || ''
+  })) : [];
 };
 
 const fetchInstructors = async (): Promise<Instructor[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(JSON.parse(localStorage.getItem('instructors') || '[]'));
-    }, 300);
-  });
+  const { data, error } = await supabase
+    .from('instructors')
+    .select('*');
+  
+  if (error) {
+    console.error('Error fetching instructors:', error);
+    throw error;
+  }
+  
+  return data ? data.map(instructor => ({
+    id: instructor.id,
+    name: instructor.name,
+    phone: instructor.phone || ''
+  })) : [];
 };
 
 const AddSessionForm: React.FC<AddSessionFormProps> = ({ onSubmit, occupiedTimeSlots = [] }) => {
